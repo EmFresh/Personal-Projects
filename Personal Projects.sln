@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Polymorphic Voodo", "Polymo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "triangle", "triangle\triangle.vcxproj", "{82E2C312-14EE-42F2-85E4-74BD1193BBA6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Project1", "Project1\Project1.vcxproj", "{D1EE95ED-8717-4C3D-A188-7BE74EC863B2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -51,6 +53,14 @@ Global
 		{82E2C312-14EE-42F2-85E4-74BD1193BBA6}.Release|x64.Build.0 = Release|x64
 		{82E2C312-14EE-42F2-85E4-74BD1193BBA6}.Release|x86.ActiveCfg = Release|Win32
 		{82E2C312-14EE-42F2-85E4-74BD1193BBA6}.Release|x86.Build.0 = Release|Win32
+		{D1EE95ED-8717-4C3D-A188-7BE74EC863B2}.Debug|x64.ActiveCfg = Debug|x64
+		{D1EE95ED-8717-4C3D-A188-7BE74EC863B2}.Debug|x64.Build.0 = Debug|x64
+		{D1EE95ED-8717-4C3D-A188-7BE74EC863B2}.Debug|x86.ActiveCfg = Debug|Win32
+		{D1EE95ED-8717-4C3D-A188-7BE74EC863B2}.Debug|x86.Build.0 = Debug|Win32
+		{D1EE95ED-8717-4C3D-A188-7BE74EC863B2}.Release|x64.ActiveCfg = Release|x64
+		{D1EE95ED-8717-4C3D-A188-7BE74EC863B2}.Release|x64.Build.0 = Release|x64
+		{D1EE95ED-8717-4C3D-A188-7BE74EC863B2}.Release|x86.ActiveCfg = Release|Win32
+		{D1EE95ED-8717-4C3D-A188-7BE74EC863B2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

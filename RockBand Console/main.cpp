@@ -9,28 +9,28 @@
 #include <thread>
 
 using namespace std;
-namespace fs = experimental::filesystem;
-Console *con = new Console("RockBand Console");
+namespace fs = filesystem;
+EmConsole *con = new EmConsole("RockBand Console");
 
-vector <vector<string>> *track = new vector<vector<string>>(0), *notes = new vector<vector<string>>(0), *logo = new vector<vector<string>>(0);
-vector<string> *box = new vector<string>;
+SpriteSheet *track = new SpriteSheet, *notes = new SpriteSheet, *logo = new SpriteSheet;
+Sprite *box = new Sprite;
 vector<vector<int>>*disiNotes = new vector<vector<int>>(5, vector<int>());
-vector<int>*fretColour = new vector<int> {con->FG_GREEN,con->FG_RED,con->FG_YELLOW,
-con->FG_BLUE,con->FG_PURPLE}, *noteColour = new vector<int> {con->FG_GREEN | con->FG_INTENSIFY,con->FG_RED | con->FG_INTENSIFY,
-con->FG_YELLOW | con->FG_INTENSIFY,con->FG_BLUE | con->FG_INTENSIFY,con->FG_PURPLE | con->FG_INTENSIFY},
-*lines = new vector <int>(1, -2);
+vector<int>*fretColour = new vector<int> {FG_GREEN,FG_RED,FG_YELLOW,
+FG_BLUE,FG_PURPLE}, *noteColour = new vector<int> {FG_GREEN | FG_INTENSIFY,FG_RED | FG_INTENSIFY,
+FG_YELLOW | FG_INTENSIFY,FG_BLUE | FG_INTENSIFY,FG_PURPLE | FG_INTENSIFY};
+vector <int> *lines = new vector <int>(1, -2);
 
 vector<vector<long>>*song = new vector<vector<long>>(5), *songTemp = new vector<vector<long>>(5);
 long *lastNote = new long, *incrimentCounter = new long;
 int trackSpeed[5], colliCount[5], speedCount = 1000, barCount, createSpeed,
-createCountCounter = speedCount, centerTrack, countAmount[5], notesHit;
+createCountCounter = speedCount, centerTrack, countAmount[5], notesHit, noteOffset = 14, fretOffset;
 float incriment = -1, lastIncriment, createCount;
 bool pressed[5], stroke, start = true, create;
 keyinput key;
 
 int vol, mute, res, songChoice, songChoiceCounter;
 string* songName = new string();
-string *percentstr = new string;
+wstring *percentstr = new wstring;
 clock_t* tsT = new clock_t, *diffT = new clock_t, *startT = new clock_t, *endT = new clock_t;
 thread *t = new thread, *t2 = new thread;
 AudioPlayer* sound = new AudioPlayer();//.wav files can only be 12 characters long
@@ -41,22 +41,23 @@ void saveSong();
 void openSong(string&);
 bool collision();
 void noteDelete();
-wstring cDir(wstring );
+wstring cDir(wstring);
 void reset();
 void missFX(int seed);
 void playButtonPress();
 void drawLines();
 void barLines();
-bool invisable(int , int );
+bool invisable(int, int);
 void playSongMovement();
-float notesInSong(vector<vector<long>>* );
+float notesInSong(vector<vector<long>>*);
 void percent();
 void playTrack();
 void createButtonPress();
 void createSongMovement();
 void createTrack();
 bool startScreen();
-void songChoiceMovement(int );
+void songChoiceMovement(int);
+bool createdSongList();
 bool songList();
 #pragma endregion
 
@@ -83,7 +84,7 @@ void saveSong()
 		songs << endl;
 	}
 	songs << songName->substr(2) << endl;
-	songs << *endT - *startT-250;
+	songs << *endT - *startT - 250;
 	songs.close();
 }
 void openSong(string &songFile)
@@ -115,7 +116,7 @@ void openSong(string &songFile)
 		if(a.size() > 0)
 			if(a[a.size() - 1] < *lastNote)
 				*lastNote = a[a.size() - 1];
-	OutputDebugString(("endT: " + *songName + '\n').c_str());
+	OutputDebugStringA(("endT: " + *songName + '\n').c_str());
 
 }
 #pragma endregion	
@@ -173,7 +174,7 @@ void createButtonPress()
 
 void createSongMovement()
 {
-	incriment = (clock() - *tsT) / (CLOCKS_PER_SEC*.10);
+	incriment = (clock() - *tsT) / (CLOCKS_PER_SEC*.1);
 
 	if(incriment >= 1)
 		*tsT = clock();
@@ -192,7 +193,7 @@ void createTrack()
 
 	// draws frets that lightup when key is pressed
 	for(short a = 0; a < 5; a++)
-		con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), con->conHeight - 5, (*fretColour)[a]);
+		con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), con->getHeight() - 5, (*fretColour)[a]);
 }
 #pragma endregion
 
@@ -202,7 +203,10 @@ void percent()
 {
 	char p2[8];
 	sprintf_s(p2, "%.2f", abs((notesInSong(song) - notesHit) / notesInSong(song) * 100 - 100));
-	*percentstr = string((char*)p2) + " %";
+	string tmp = p2;
+	tmp += '%';
+	*percentstr =wstring(tmp.begin(),tmp.end());
+	return;
 }
 
 void missFX(int seed)
@@ -219,15 +223,16 @@ bool collision()
 	{
 		if(colliCount[a] < (*songTemp)[a].size())
 		{
-			if((*songTemp)[a][colliCount[a]] > con->conHeight - 2)
+			if((*songTemp)[a][colliCount[a]] + noteOffset > con->getHeight() - 2)
 				colliCount[a]++;
-		} else if(colliCount[a] + 1 < (*songTemp)[a].size())
-			if((*songTemp)[a][colliCount[a] + 1] > con->conHeight - 8)
-				colliCount[a] += 2;
+		} else
+			if(colliCount[a] + 1 < (*songTemp)[a].size())
+				if((*songTemp)[a][colliCount[a] + 1] + noteOffset > con->getHeight() - 8)
+					colliCount[a] ++;
 
 		if(pressed[a])
 			if(colliCount[a] < (*songTemp)[a].size())
-				if((*songTemp)[a][colliCount[a]] > con->conHeight - 8)
+				if((*songTemp)[a][colliCount[a]] + noteOffset > con->getHeight() - 8)
 					return true;
 	}
 	return false;
@@ -238,12 +243,10 @@ void noteDelete()
 	for(int a = 0; a < songTemp->size(); a++)
 		if(pressed[a])
 			if(colliCount[a] < (*songTemp)[a].size())
-				if((*songTemp)[a][colliCount[a]] > con->conHeight - 8 && (*songTemp)[a][colliCount[a]] <= con->conHeight - 2)
-				{
-					//(*songTemp)[a].erase((*songTemp)[a].begin() + colliCount[a]);
-					notesHit++;
+				if((*songTemp)[a][colliCount[a]] + noteOffset > con->getHeight() - 8 && (*songTemp)[a][colliCount[a]] + noteOffset <= con->getHeight() - 2)
+					notesHit++,
 					(*disiNotes)[a].push_back(colliCount[a]);
-				}
+
 }
 
 bool invisable(int fret, int check)
@@ -270,14 +273,12 @@ void drawLines()
 	{
 		if(incriment > 0)
 			(*lines)[a] += incriment;
-		if((a + (barCount)) % barNum == 0)
-			con->toConsoleBuffer("______________________________________________________________", centerTrack + 1, (*lines)[a], con->FG_WHITE | con->FG_INTENSIFY);
-		else
-			con->toConsoleBuffer("______________________________________________________________", centerTrack + 1, (*lines)[a]);
+		con->toConsoleBuffer(L"______________________________________________________________", centerTrack + 1, (*lines)[a],
+			(a + (barCount)) % barNum == 0 ? FG_WHITE | FG_INTENSIFY : FG_WHITE);
 	}
 
-	for(; (*lines)[lines->size() - 1] > (float)(*notes)[0].size();)
-		lines->push_back((*lines)[lines->size() - 1] - (float)(*notes)[0].size() * 2);
+	for(; (*lines)[lines->size() - 1] > (float)(*notes)[0].getHeight();)
+		lines->push_back((*lines)[lines->size() - 1] - (float)(*notes)[0].getHeight() * 2);
 
 	while((*lines)[0] > con->getHeight())
 	{
@@ -286,6 +287,7 @@ void drawLines()
 		if(barCount > (barNum - 1))
 			barCount = 0;
 	}
+
 	//	OutputDebugStringA(string(to_string(lines[lines.size()-1])+" : "+ to_string(notes[0].size()) + "\n").c_str());
 
 }
@@ -299,13 +301,8 @@ void barLines()
 		drawLines();
 	} else
 	{
-		static clock_t in2 = 0;
+		static clock_t in2;
 		incriment = floor((((in2 = clock()) - *tsT) / (*endT / (*lastNote - con->getHeight()))));
-		if(incriment > 0)
-		{
-			//*incrimentCounter += incriment;
-			*tsT = in2 + ((in2 - *tsT) - (*endT / (*lastNote - con->getHeight())));
-		}
 		drawLines();
 
 	}
@@ -326,7 +323,7 @@ void playSongMovement()
 
 			// checks weather or not to draw notes to screen
 			if(b > countAmount[a] && (*songTemp)[a][b] <= -3)
-				if((*songTemp)[a][b - 1] >= (abs((*song)[a][b]) - abs((*song)[a][b - 1])))
+				if((*songTemp)[a][b - 1] + noteOffset >= (abs((*song)[a][b]) - abs((*song)[a][b - 1])))
 					(*songTemp)[a][b] = (*songTemp)[a][b - 1] - (abs((*song)[a][b]) - abs((*song)[a][b - 1]));
 				else
 					break;
@@ -334,7 +331,8 @@ void playSongMovement()
 			if(b > countAmount[a])
 				if((*songTemp)[a][b] > -3 && ((*songTemp)[a][b - 1] >= (abs((*song)[a][b]) - abs((*song)[a][b - 1]))))
 				{
-					if((*songTemp)[a][b - 1] > con->getHeight())
+					//note dropoff
+					if((*songTemp)[a][b - 1] + noteOffset > con->getHeight())
 						countAmount[a]++;
 
 					if((*disiNotes)[a].size() > 0)
@@ -343,16 +341,14 @@ void playSongMovement()
 				}
 
 			if(!invisable(a, b))
-				if((*songTemp)[a][b] > -3 && (*songTemp)[a][b] < con->getHeight())
-					if((*songTemp)[a][b] < con->getHeight() - 5)
-						con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), (*songTemp)[a][b], (*noteColour)[a]);
+				if((*songTemp)[a][b] + noteOffset > -3 && (*songTemp)[a][b] + noteOffset < con->getHeight())
+					if((*songTemp)[a][b] + noteOffset < con->getHeight() - 5)
+						con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
 					else
-						con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), (*songTemp)[a][b], con->FG_RED | con->FG_INTENSIFY);
+						con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), (*songTemp)[a][b] + noteOffset, FG_RED | FG_INTENSIFY);
 		}
 		//OutputDebugString((to_string(countAmount[a]) + "\n").c_str());
 	}
-	//if(incriment > 0)
-	//	*tsT = clock();
 }
 
 void playButtonPress()
@@ -401,6 +397,7 @@ void playButtonPress()
 
 void playTrack()
 {
+	//con->mouseState();
 	con->toConsoleBuffer((*track)[0], centerTrack, 0);
 	*t2 = thread(percent);
 	t2->detach();
@@ -409,12 +406,12 @@ void playTrack()
 	playSongMovement();
 	playButtonPress();
 
-	con->toConsoleBuffer(*box, con->conWidth - (*box)[0].size(), 0);
-	con->toConsoleBuffer(*percentstr, con->conWidth - (*box)[0].size() / 2 - (percentstr->size() + 1) / 2, 2);
+	con->toConsoleBuffer(*box, con->getWidth() - (*box).getWidth(), 0);
+	con->toConsoleBuffer(*percentstr, con->getWidth() - (*box).getWidth() / 2 - (percentstr->size() + 1) / 2, 2);
 
 	// draws frets that lightup when key is pressed
 	for(short a = 0; a < 5; a++)
-		con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), con->conHeight - 5, (*fretColour)[a]);
+		con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), con->getHeight() - 5, (*fretColour)[a]);
 }
 #pragma endregion
 
@@ -446,11 +443,10 @@ bool songList()
 {
 	/*File Management Test*/
 
-	string path = "./", str;
-	wstring p;
+	wstring path = L"./", str, p;
 	vector<wstring>songs, songPath;
 	//vector<string> title {"",""};
-	int colours[] = {con->FG_WHITE,con->FG_GREEN};
+	int colours[] = {FG_WHITE,FG_GREEN};
 
 	while(!key.stroke('A'))
 	{
@@ -462,11 +458,11 @@ bool songList()
 			if(p.substr(p.find_last_of('.') + 1) == L"wav" || p.substr(p.find_last_of('.') + 1) == L"mp3")
 			{
 				songPath.push_back(cDir(p));
-				songs.push_back(p.substr(last = (p.find_last_of('\\') + 1), p.find_last_of('.') - last));
+				songs.push_back(p.substr(last = (p.find_last_of('/') + 1), p.find_last_of('.') - last));
 
-				con->toConsoleBuffer("Song List", startWidth - 4, startHeight - 2);
-				con->toConsoleBuffer("----------------------------", startWidth - 14, startHeight - 1);
-				str = string(songs[count].begin(), songs[count].end());
+				con->toConsoleBuffer(L"Song List", startWidth - 4, startHeight - 2);
+				con->toConsoleBuffer(L"----------------------------", startWidth - 14, startHeight - 1);
+				str = wstring(songs[count].begin(), songs[count].end());
 				con->toConsoleBuffer(str.c_str(), startWidth - (str.size() / 2), startHeight + count, (songChoice == count ? colours[1] : colours[0]));
 				count++;
 			}
@@ -486,12 +482,11 @@ bool songList()
 	return true;
 }
 
-void createdSongList()
+bool createdSongList()
 {
-	string path = "./songs/", str;
-	wstring p;
+	wstring path = L"./songs/", str, p;
 	vector<wstring>songs, songPath;
-	int colours[] = {con->FG_WHITE,con->FG_GREEN};
+	int colours[] = {FG_WHITE,FG_GREEN};
 
 	while(!key.stroke('A'))
 	{
@@ -502,14 +497,14 @@ void createdSongList()
 			p = a.path();
 
 			//OutputDebugString((to_string(p.find_last_of('.')) + "\n").c_str());
-			con->toConsoleBuffer("Song List", startWidth - 4, startHeight - 2);
-			con->toConsoleBuffer("----------------------------", startWidth - 14, startHeight - 1);
+			con->toConsoleBuffer(L"Song List", startWidth - 4, startHeight - 2);
+			con->toConsoleBuffer(L"----------------------------", startWidth - 14, startHeight - 1);
 			if(p.substr(p.find_last_of('.') + 1) == L"song")
 			{
 			//	OutputDebugStringA("Entered if Statement\n");
 				songPath.push_back(cDir(p));
-				songs.push_back(p.substr(last = (p.find_last_of('\\') + 1), p.find_last_of('.') - last));
-				str = string(songs[count].begin(), songs[count].end());
+				songs.push_back(p.substr(last = (p.find_last_of('/') + 1), p.find_last_of('.') - last));
+				str = wstring(songs[count].begin(), songs[count].end());
 				con->toConsoleBuffer(str, startWidth - (str.size() / 2), startHeight + count, (songChoice == count ? colours[1] : colours[0]));
 				count++;
 			}
@@ -521,7 +516,10 @@ void createdSongList()
 		con->drawConsole();
 		songs.clear();
 		songPath.clear();
+		if(key.stroke('S'))
+			return false;
 	}
+	return true;
 }
 #pragma endregion
 
@@ -553,30 +551,58 @@ void reset()
 
 bool startScreen()
 {
-	int x = con->getWidth() / 2 - (*box)[0].size() / 2, y = con->getHeight() / 2 - (2 * (box->size() / 2));
-	int colours[] = {con->FG_WHITE,con->FG_GREEN};
+	int x = con->getWidth() / 2 - box->getWidth() / 2, y = con->getHeight() / 2 - (2 * (box->getHeight() / 2));
+	int colours[] = {FG_WHITE,FG_GREEN};
 
-	//while(10);
+	con->placeConsoleCenter();
+	Sprite thing;
+	vector<wstring>* thing2 = new  vector<wstring> {1,L" "};
+	thing.create(thing2);
+	delete thing2;
+
 	while(!key.stroke('A'))
 	{
-		x = con->getWidth() / 2 - (*box)[0].size() / 2, y = con->getHeight() / 2 - (2 * (box->size() / 2));
+
+		MouseInput mouse = con->mouseState();
+
+		
+
+		con->toConsoleBuffer(to_wstring(mouse.position.X).c_str(), 0, 0);
+		if(box->collision(thing, {short(x),short(y)}, mouse.position))
+			con->toConsoleBuffer(L"mouse colision", 0, 0);
+
+		for(auto &a : mouse.buttons)
+			switch(a.first)
+			{
+			case LEFT_CLICK:
+				if(a.second)
+					con->toConsoleBuffer(L"Left click", 0, 0);
+				break;
+			case RIGHT_CLICK:
+				break;
+			}
+		
+		x = con->getWidth() / 2 - (*box).getWidth() / 2, y = con->getHeight() / 2 - (2 * (box->getHeight() / 2));
 		if(key.stroke(VK_UP) || key.stroke(VK_DOWN))
 			create = !create;
-		con->toConsoleBuffer((*logo)[0], 35, 12, con->FG_RED | con->FG_INTENSIFY);
+
+		con->toConsoleBuffer((*logo)[0], con->getWidth() / 2 - (*logo)[0].getWidth() / 2, 12, FG_RED | FG_INTENSIFY);
 		con->toConsoleBuffer(*box, x, y, colours[!create]);
-		con->toConsoleBuffer("Single Play", x + 3, y + 2, colours[!create]);
+		con->toConsoleBuffer(L"Single Play", x + 3, y + 2, colours[!create]);
 		con->toConsoleBuffer(*box, x, y + 5, colours[create]);
-		con->toConsoleBuffer("Create", x + 6, y + 7, colours[create]);
+		con->toConsoleBuffer(L"Create", x + 6, y + 7, colours[create]);
+
 		con->drawConsole();
 		if(key.stroke('Q'))
 			return false;
 	}
 
-	if(create == 0)
+	if(create == 0)	//play song
 	{
 		createdSongList();
 		openSong(*songName);
-	} else
+	}
+	else //create	song
 	{
 		songList();
 		for(auto &a : *song)
@@ -588,21 +614,32 @@ bool startScreen()
 }
 #pragma endregion
 
+typedef unsigned long long supalong;
 void main()
 {
-	con->textFileToVector("Track.txt", *track);
-	con->textFileToVector("Notes.txt", *notes);
-	con->textFileToVector("Logo.txt", *logo);
-	con->setConsoleSize((*track)[0][0].size() * 2, (*track)[0].size());
+	//con->textFileToVector("Track.txt", *track);
+	//con->textFileToVector("Notes.txt", *notes);
+	//con->textFileToVector("Logo.txt" ,  *logo );
+	logo->create("Logo.txt");
+	track->create("Track.txt");
+	notes->create("Notes.txt");
+	con->setConsoleSize((*track)[0].getWidth() * 2, (*track)[0].getHeight());
 	con->setConsolePosition(0, 0);
-	con->setResizable(false);
+	con->setResizable(true);
 
-	*box =
-	{
-		"._______________.",
-		"|               |",
-		"|               |",
-		"|_______________|"};
+	supalong g;
+	time_t tim = time(nullptr);
+	
+	std::vector<std::wstring> boxy = {
+		L" _______________",
+		L"|               |",
+		L"|               |",
+		L"|_______________|"
+
+
+	};
+
+	box->create(&boxy);
 
 
 	while(true)
@@ -613,7 +650,7 @@ void main()
 			*diffT = clock();
 			while(!key.stroke('Q'))
 			{
-				centerTrack = con->getWidth() / 2 - (*track)[0][0].size() / 2;
+				centerTrack = con->getWidth() / 2 - (*track)[0].getWidth() / 2;
 
 				if(create)
 					createTrack();
@@ -622,7 +659,7 @@ void main()
 
 #ifdef _DEBUG
 				static int counter, c2;
-				con->toConsoleBuffer(string("fps: " + to_string(c2)).c_str(), 0, 1);
+				con->toConsoleBuffer(wstring(L"fps: " + to_wstring(c2)).c_str(), 0, 1);
 
 				if(clock() - *diffT >= CLOCKS_PER_SEC)
 				{

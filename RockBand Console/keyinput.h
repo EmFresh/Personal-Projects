@@ -152,10 +152,11 @@
 		*/
 		bool stroke(int key)
 		{
-			enter.insert(std::pair<int, bool>(key, false));
+			enter.insert({key, false});
 
 			if(GetAsyncKeyState(key))
 				enter[key] = true;
+
 			else if(enter[key] && !GetAsyncKeyState(key))
 			{
 				enter[key] = false;
