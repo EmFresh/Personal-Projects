@@ -23,7 +23,7 @@ vector <int> *lines = new vector <int>(1, -2);
 vector<vector<long>>*song = new vector<vector<long>>(5), *songTemp = new vector<vector<long>>(5);
 long *lastNote = new long, *incrimentCounter = new long;
 int trackSpeed[5], colliCount[5], speedCount = 1000, barCount, createSpeed,
-createCountCounter = speedCount, centerTrack, countAmount[5], notesHit, noteOffset = 14, fretOffset;
+createCountCounter = speedCount, centerTrack, countAmount[5], notesHit, noteOffset = 0, fretOffset;
 float incriment = -1, lastIncriment, createCount;
 bool pressed[5], stroke, start = true, create;
 keyinput key;
@@ -84,7 +84,7 @@ void saveSong()
 		songs << endl;
 	}
 	songs << songName->substr(2) << endl;
-	songs << *endT - *startT - 250;
+	songs << *endT - *startT;
 	songs.close();
 }
 void openSong(string &songFile)
@@ -125,6 +125,7 @@ void openSong(string &songFile)
 
 void createButtonPress()
 {
+	clock_t tmp = clock();
 	//Key Stroke
 	if(key.stroke(VK_RETURN))
 		saveSong();
@@ -144,8 +145,8 @@ void createButtonPress()
 
 		for(short a = 0; a < 5; a++)
 			if(key.press(frets[a]))
-			{
-				*endT = clock();
+			{			 				
+				*endT = tmp;
 				((*song)[a]).push_back(-(createCount)+con->getHeight() - 5);
 			}
 	}
@@ -205,7 +206,7 @@ void percent()
 	sprintf_s(p2, "%.2f", abs((notesInSong(song) - notesHit) / notesInSong(song) * 100 - 100));
 	string tmp = p2;
 	tmp += '%';
-	*percentstr =wstring(tmp.begin(),tmp.end());
+	*percentstr = wstring(tmp.begin(), tmp.end());
 	return;
 }
 
@@ -368,7 +369,7 @@ void playButtonPress()
 		{
 			*t = thread(missFX, rand());
 			t->detach();
-			sound->setVolume(300);
+			sound->setVolume(.3);
 		}
 		stroke = true;
 	}
@@ -463,7 +464,7 @@ bool songList()
 				con->toConsoleBuffer(L"Song List", startWidth - 4, startHeight - 2);
 				con->toConsoleBuffer(L"----------------------------", startWidth - 14, startHeight - 1);
 				str = wstring(songs[count].begin(), songs[count].end());
-				con->toConsoleBuffer(str.c_str(), startWidth - (str.size() / 2), startHeight + count, (songChoice == count ? colours[1] : colours[0]));
+				con->toConsoleBuffer(str, startWidth - (str.size() / 2), startHeight + count, (songChoice == count ? colours[1] : colours[0]));
 				count++;
 			}
 		}
@@ -545,8 +546,8 @@ void reset()
 	lastIncriment = 0;
 	start = false;
 	notesHit = 0;
-	*startT = clock();
 	*tsT = clock();
+	*startT = clock();
 }
 
 bool startScreen()
@@ -565,7 +566,7 @@ bool startScreen()
 
 		MouseInput mouse = con->mouseState();
 
-		
+
 
 		con->toConsoleBuffer(to_wstring(mouse.position.X).c_str(), 0, 0);
 		if(box->collision(thing, {short(x),short(y)}, mouse.position))
@@ -581,7 +582,7 @@ bool startScreen()
 			case RIGHT_CLICK:
 				break;
 			}
-		
+
 		x = con->getWidth() / 2 - (*box).getWidth() / 2, y = con->getHeight() / 2 - (2 * (box->getHeight() / 2));
 		if(key.stroke(VK_UP) || key.stroke(VK_DOWN))
 			create = !create;
@@ -601,8 +602,7 @@ bool startScreen()
 	{
 		createdSongList();
 		openSong(*songName);
-	}
-	else //create	song
+	} else //create	song
 	{
 		songList();
 		for(auto &a : *song)
@@ -627,9 +627,6 @@ void main()
 	con->setConsolePosition(0, 0);
 	con->setResizable(true);
 
-	supalong g;
-	time_t tim = time(nullptr);
-	
 	std::vector<std::wstring> boxy = {
 		L" _______________",
 		L"|               |",
@@ -678,7 +675,7 @@ void main()
 			if(t->joinable())
 				t->join();
 			reset();
-			sound->stop();
+			sound->stopAll();
 		} else
 			break;
 		return;

@@ -54,14 +54,6 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <None Include="songs\song 1.song">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="songs\Menu Music (Main Loop).song">
-      <Filter>Resource Files</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <Media Include="GameJam(Full).wav">
       <Filter>Resource Files</Filter>
     </Media>
@@ -73,5 +65,16 @@
     <ResourceCompile Include="RockBand Console.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="songs\Battle_Time(All together).song">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="songs\GameJam(Full).song">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="songs\SOMEBODY ONCE TOUCHA MY SPAGHET.song">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

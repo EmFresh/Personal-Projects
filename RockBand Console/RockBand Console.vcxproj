@@ -89,6 +89,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -116,6 +117,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -140,15 +142,16 @@
     <Text Include="Track.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="songs\Menu Music (Main Loop).song" />
-    <None Include="songs\song 1.song" />
-  </ItemGroup>
-  <ItemGroup>
     <Media Include="Game Jam(Main Loop).mp3" />
     <Media Include="GameJam(Full).wav" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RockBand Console.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="songs\Battle_Time(All together).song" />
+    <None Include="songs\GameJam(Full).song" />
+    <None Include="songs\SOMEBODY ONCE TOUCHA MY SPAGHET.song" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
