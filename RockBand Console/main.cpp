@@ -10,6 +10,10 @@
 
 using namespace std;
 namespace fs = filesystem;
+
+#pragma region Global Variables
+
+
 EmConsole *con = new EmConsole("RockBand Console");
 
 SpriteSheet *track = new SpriteSheet, *notes = new SpriteSheet, *logo = new SpriteSheet;
@@ -23,10 +27,10 @@ vector <int> *lines = new vector <int>(1, -2);
 vector<vector<long>>*song = new vector<vector<long>>(5), *songTemp = new vector<vector<long>>(5);
 long *lastNote = new long, *incrimentCounter = new long;
 int trackSpeed[5], colliCount[5], speedCount = 1000, barCount, createSpeed,
-createCountCounter = speedCount, centerTrack, countAmount[5], notesHit, noteOffset = 0, fretOffset;
+createCountCounter = speedCount, centerTrack, countAmount[5], notesHit, noteOffset = 10, fretOffset;
 float incriment = -1, lastIncriment, createCount;
 bool pressed[5], stroke, start = true, create;
-keyinput key;
+KeyInput key;
 
 int vol, mute, res, songChoice, songChoiceCounter;
 string* songName = new string();
@@ -34,7 +38,7 @@ wstring *percentstr = new wstring;
 clock_t* tsT = new clock_t, *diffT = new clock_t, *startT = new clock_t, *endT = new clock_t;
 thread *t = new thread, *t2 = new thread;
 AudioPlayer* sound = new AudioPlayer();//.wav files can only be 12 characters long
-
+#pragma endregion
 
 #pragma region Deffinitions
 void saveSong();
@@ -83,7 +87,7 @@ void saveSong()
 			songs << b;
 		songs << endl;
 	}
-	songs << songName->substr(2) << endl;
+	songs << *songName << endl;
 	songs << *endT - *startT;
 	songs.close();
 }
@@ -107,6 +111,7 @@ void openSong(string &songFile)
 		}
 	}
 	getline(songs >> ws, *songName);
+	//songName->pop_back();//for some reason a "\r" pops up (idk y)
 	songs >> *endT;
 	songs.close();
 
@@ -458,7 +463,7 @@ bool songList()
 
 			if(p.substr(p.find_last_of('.') + 1) == L"wav" || p.substr(p.find_last_of('.') + 1) == L"mp3")
 			{
-				songPath.push_back(cDir(p));
+				songPath.push_back(p=cDir(p));
 				songs.push_back(p.substr(last = (p.find_last_of('/') + 1), p.find_last_of('.') - last));
 
 				con->toConsoleBuffer(L"Song List", startWidth - 4, startHeight - 2);
@@ -503,7 +508,7 @@ bool createdSongList()
 			if(p.substr(p.find_last_of('.') + 1) == L"song")
 			{
 			//	OutputDebugStringA("Entered if Statement\n");
-				songPath.push_back(cDir(p));
+				songPath.push_back(p=cDir(p));
 				songs.push_back(p.substr(last = (p.find_last_of('/') + 1), p.find_last_of('.') - last));
 				str = wstring(songs[count].begin(), songs[count].end());
 				con->toConsoleBuffer(str, startWidth - (str.size() / 2), startHeight + count, (songChoice == count ? colours[1] : colours[0]));
@@ -614,7 +619,6 @@ bool startScreen()
 }
 #pragma endregion
 
-typedef unsigned long long supalong;
 void main()
 {
 	//con->textFileToVector("Track.txt", *track);
@@ -632,8 +636,6 @@ void main()
 		L"|               |",
 		L"|               |",
 		L"|_______________|"
-
-
 	};
 
 	box->create(&boxy);

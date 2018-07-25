@@ -1,5 +1,6 @@
 #include "AudioPlayer.h"
 unsigned int AudioPlayer::_numInst, AudioPlayer::_inst;
+AudioInfo AudioPlayer::_info;
 
 using namespace std;
 AudioPlayer::AudioPlayer()
@@ -37,8 +38,8 @@ void AudioPlayer::play(bool repeat)
 	char status[128];
 
 	//opens an instance of the _audio file
-	while(inerror = mciSendStringA(string("open " + *_audio + " alias " + to_string(++inst * 10)).c_str(), NULL, 0, NULL))
-		if(inst > _numInst)
+	while (inerror = mciSendStringA(string("open " + *_audio + " alias " + to_string(++inst * 10)).c_str(), NULL, 0, NULL))
+		if (inst > _numInst)
 		{
 			printError(inerror);
 			return;
@@ -51,13 +52,14 @@ void AudioPlayer::play(bool repeat)
 	_numInst = inst > _numInst ? inst : _numInst;
 
 	//plays the _audio file
-	if(repeat)
+	if (repeat)
 	{
 		printError(mciSendStringA(string("status " + to_string((inst) * 10) + " length").c_str(), status, 128, 0));
-		if(!printError(mciSendStringA(string("play " + to_string(inst * 10) + " repeat ").c_str(), NULL, NULL, NULL)))
+		if (!printError(mciSendStringA(string("play " + to_string(inst * 10) + " repeat ").c_str(), NULL, NULL, NULL)))
 			info();
-	} else
-		if(!printError(mciSendStringA(string("play " + to_string(inst * 10)).c_str(), NULL, NULL, NULL)))
+	}
+	else
+		if (!printError(mciSendStringA(string("play " + to_string(inst * 10)).c_str(), NULL, NULL, NULL)))
 			info();
 }
 
@@ -67,7 +69,7 @@ void AudioPlayer::mute()
 
 	printError(mciSendStringA(string("set " + to_string(_inst * 10) + " audio all on").c_str(), status, 128, 0));
 
-	if(status != "on") //turn mute On
+	if (status != "on") //turn mute On
 		printError(mciSendStringA(string("set " + to_string(_inst * 10) + " audio all on").c_str(), NULL, NULL, 0));
 	else //turn mute Off
 		printError(mciSendStringA(string("set " + to_string(_inst * 10) + " audio all off").c_str(), NULL, NULL, 0));
@@ -91,7 +93,7 @@ void AudioPlayer::stop()
 
 void AudioPlayer::stopAll()
 {
-	for(int a = 0; a < _numInst; a++)
+	for (int a = 0; a < _numInst; a++)
 		mciSendStringA(string("stop " + to_string((a + 1) * 10)).c_str(), NULL, 0, NULL);
 	cleanUp();//Cleans up all stopped _audio
 }
@@ -100,7 +102,7 @@ bool AudioPlayer::isPlaying(int inst)
 {
 	char info[128];
 
-	if(printError(mciSendStringA(string("status " + to_string(inst * 10) + " mode").c_str(), info, 125, NULL)))
+	if (printError(mciSendStringA(string("status " + to_string(inst * 10) + " mode").c_str(), info, 125, NULL)))
 		return 0;
 
 	return string(info) == "playing";
@@ -112,11 +114,11 @@ void AudioPlayer::info()
 	mciSendStringA("sysinfo all quantity open", info, 128, NULL);
 	string size = string(info), name;
 
-	if(stoi(size)>0)
+	if (stoi(size) > 0)
 	{
 		OutputDebugStringA("AudioPlayer Info:\n"/*(string(info) + "\n").c_str()*/);
 
-		for(int a = 1; a <= stoi(size); a++)
+		for (int a = 1; a <= stoi(size); a++)
 		{
 			mciSendStringA(string("sysinfo all name " + to_string(a) + " open").c_str(), info, 128, NULL);
 			OutputDebugStringA((name = ((string)info + " ")).c_str());//prints instance name
@@ -129,17 +131,17 @@ void AudioPlayer::info()
 
 void AudioPlayer::setVolume(float vol)
 {
-	if(vol <= 1 && vol >= 0)
+	if (vol <= 1 && vol >= 0)
 		printError(mciSendStringA(string("setaudio " + to_string(_inst * 10) + " volume to " + to_string(int(1000 * vol))).c_str(), 0, 0, 0));
 	else
-		OutputDebugStringA("Invalid volume height\n");
+		OutputDebugStringA("Invalid volume input\n");
 }
 
 bool AudioPlayer::printError(int error)
 {
 	char prob[128];
 	mciGetErrorStringA(error, prob, 128);
-	if(error)
+	if (error)
 	{
 		OutputDebugStringA(("AudioPlayer Error: " + (string)prob + "\n").c_str());
 		return true;
@@ -153,12 +155,12 @@ void AudioPlayer::cleanUp()
 	mciSendStringA(string("sysinfo all quantity open").c_str(), info, 128, NULL);
 	string size = string(info);
 
-	for(int a = 1; a <= stoi(size); a++)
+	for (int a = 1; a <= stoi(size); a++)
 	{
 		mciSendStringA(string("sysinfo all name " + to_string(a) + " open").c_str(), info, 128, NULL);
 		mciSendStringA(string("status " + string(info) + " mode").c_str(), info, 125, NULL);
 
-		if(string(info) == "stopped")
+		if (string(info) == "stopped")
 		{
 			mciSendStringA(string("sysinfo all name " + to_string(a--) + " open").c_str(), info, 128, NULL);
 			mciSendStringA(string("close " + string(info)).c_str(), 0, 0, NULL);

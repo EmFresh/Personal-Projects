@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include<string>
 #include<iostream>
-#pragma comment(lib,"winmm.lib")
+//#pragma comment(lib,"winmm.lib")
 
 /***Structs***/
 struct AudioInfo
@@ -12,7 +12,7 @@ struct AudioInfo
 	bool* stoped;
 	bool* repeat;
 	const char**instanceNames;
-
+	unsigned int inst;
 };
 /***Classes***/
 class AudioPlayer
@@ -107,5 +107,6 @@ private:
 	/****Utility Variables****/
 	std::string* _audio = new std::string;
 	static unsigned int _numInst, _inst;
+	static AudioInfo _info;
 };
 
