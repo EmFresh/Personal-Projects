@@ -13,7 +13,7 @@
 #include <io.h>
 
 #define newstr new char
-
+typedef unsigned short ushort;
 /*Enums*/
 /*
 summary:
@@ -71,18 +71,27 @@ struct Sprite
 	{
 		setTag(tag);
 		FILE *f;
-		fopen_s(&f, file, "r");
+		fopen_s(&f, file, "r, ccs=UNICODE");
 
 		//std::vector<std::wstring>* tmp = _sprite;
 		_sprite->clear();
 
-		_height = _width = 0;
+		std::vector<std::wstring>sprite;
+
+		_height = 
+		_width = 0;
 
 		wchar_t * str = new wchar_t[255];
+		std::wstring str2 = L"";
+		//while(str2 = fgetws(str2, 255, f),
+		//	  str = (str2 == nullptr ? L"" : (str2[wcslen(str2) - 1] = '\0', str2)),
+		//	  str2 != nullptr);
 
-		while(str = fgetws(str, 255, f), _sprite->push_back((str[wcslen(str) - 1] = '\0', str)), str != nullptr)
-			_width = _width < (_sprite[_height - 1]).size() ? (_sprite[_height - 1]).size() : _width;
-		_height--;
+		while(str = fgetws(str, 255, f), sprite.push_back(str2=( str == nullptr ? L"" : (str[wcslen(str) - 1] = '\0',str))), str != nullptr)
+			_width = _width < (sprite[_height]).size() ? (sprite[_height]).size() : _width,
+		_height++;
+
+		*_sprite = sprite;
 
 		fclose(f);
 	}
@@ -97,8 +106,15 @@ struct Sprite
 		for(int a = 0; a < _height; a++)
 			_width = _width < _sprite[0][a].size() ? _sprite[0][a].size() : _width;
 	}
+	/*
 
-	bool collision(Sprite s2, COORD p1, COORD p2)
+	************
+	  ********     *******
+		****
+		 **
+
+	*/
+	bool boxCollision(Sprite s2, COORD p1, COORD p2)
 	{
 		p1 = {p1.X + _width / 2,p1.Y + _height / 2};
 		p2 = {p2.X + s2._width / 2,p2.Y + s2._height / 2};
@@ -142,7 +158,7 @@ struct Sprite
 private:
 	std::vector<std::wstring>* _sprite = new std::vector<std::wstring>;
 	char *_tag = nullptr;
-	unsigned short _width = 0, _height = 0;
+	ushort _width = 0, _height = 0;
 	short _colour = 0;
 };
 
@@ -168,12 +184,12 @@ struct SpriteSheet
 		//	size = size < --count ? count : size, count = 0;
 		//fclose(f);
 
-		std::vector<std::wstring>sprite;
+		std::vector<std::wstring> sprite;
 		unsigned short width = 0, height = 0;
 		bool seg = 0;
 		std::wstring str;
 
-		fopen_s(&f,file, "r, ccs=UNICODE");
+		fopen_s(&f, file, "r, ccs=UNICODE");
 
 		while(str2 = fgetws(str2, 255, f),
 			  str = (str2 == nullptr ? L"" : (str2[wcslen(str2) - 1] = '\0', str2)),
@@ -206,73 +222,85 @@ struct SpriteSheet
 
 	void add(Sprite* sprite)
 	{
-		Sprite **tmp = new Sprite*[++_numSprites],
-			**tmp2 = _sheet;
+		//Sprite **tmp = new Sprite*[++_numSprites],
+		//	**tmp2 = m_sheet;
+		//
+		////copy data
+		//for(int a = 0; a < _numSprites - 1; a++)
+		//	tmp[a] = new Sprite,
+		//	*(tmp[a]) = *(m_sheet[0][a]),
+		//	delete m_sheet[0][a];
+		//
+		////add sprite to sprite sheet
+		//tmp[_numSprites - 1] = new Sprite;
+		//tmp[_numSprites - 1] = sprite;
+		////m_sheet->push_back( new Sprite);
+		////m_sheet[0][0][_numSprites - 1] = sprite;
+		//m_sheet = tmp;
 
-		//copy data
-		for(int a = 0; a < _numSprites - 1; a++)
-			tmp[a] = new Sprite,
-			*(tmp[a]) = *(_sheet[a]),
-			delete _sheet[a];
-
-		//add sprite to sprite sheet
-		tmp[_numSprites - 1] = new Sprite;
-		tmp[_numSprites - 1] = sprite;
-		//_sheet->push_back( new Sprite);
-		//_sheet[0][_numSprites - 1] = sprite;
-		_sheet = tmp;
+		_sheet->push_back(sprite);
 	}
 
 	void add(std::vector<std::wstring>* sprite)
 	{
-		Sprite
-			**tmp = new Sprite*[++_numSprites],
-			**tmp2 = _sheet;
-
-		//cpy data
-		for(int a = 0; a < _numSprites - 1; a++)
-			tmp[a] = new Sprite,
-			*tmp[a] = *_sheet[a],
-			delete _sheet[a];
-		//delete[] tmp2;
-
-		//add sprite to sprite sheet
-		tmp[_numSprites - 1] = new Sprite;
-		tmp[_numSprites - 1]->create(sprite);
-		//_sheet->push_back(new Sprite);
-		//_sheet[0][_numSprites++]->create(sprite);
-		_sheet = tmp;
+		//Sprite
+		//	**tmp = new Sprite*[++_numSprites];
+		//	//**tmp2 = m_sheet;
+		//
+		////cpy data
+		//for(int a = 0; a < _numSprites - 1; a++)
+		//	tmp[a] = new Sprite,
+		//	*tmp[a] = *m_sheet[0][a],
+		//	delete m_sheet[0][a];
+		////delete[] tmp2;
+		//
+		////add sprite to sprite sheet
+		//tmp[_numSprites - 1] = new Sprite;
+		//tmp[_numSprites - 1]->create(sprite);
+		////m_sheet->push_back(new Sprite);
+		////m_sheet[0][0][_numSprites++]->create(sprite);
+		//m_sheet = tmp;
+		Sprite* tmp = new Sprite;
+		tmp->create(sprite);
+		_sheet->push_back(tmp);
 
 	}
 
 	void remove(int index)
 	{
-		delete _sheet[index];
-		_numSprites--;
+		//delete m_sheet[0][index];
+		//_numSprites--;
+		_sheet->erase(_sheet->begin() + index);
+
 	}
 
 	void remove(const char* tag)
 	{
-		for(int a = 0; a < _numSprites; a++)
-			if(_sheet[a]->getTag() == tag)
+		for(int a = 0; a < size(); a++)
+			if(_sheet[0][a]->getTag() == tag)
 			{
-				delete _sheet[a];
-				break;
+
+				//delete m_sheet[0][a];
+				//break;
+				_sheet->erase(_sheet->begin() + a);
 			}
-		_numSprites--;
+
+		//_numSprites--;
 	}
 
 	void clear()
 	{
-		for(int a = 0; a < _numSprites; a++)
-			delete _sheet[a];
-		Sprite** tmp = _sheet;
-		delete[] tmp;
+		//for(int a = 0; a < _numSprites; a++)
+		//	delete m_sheet[0][a];
+		//Sprite** tmp = m_sheet;
+		//delete[] tmp;
+
+		_sheet->clear();
 	}
 
 	int size()
 	{
-		return _numSprites;
+		return _sheet->size();
 	}
 
 	Sprite& at(unsigned int index)
@@ -282,24 +310,51 @@ struct SpriteSheet
 
 	Sprite& at(const char* tag)
 	{
-		for(int a = 0; a < _numSprites; a++)
-			if(_sheet[a]->getTag() == tag)
-				return *_sheet[a];
-		return *_sheet[_numSprites];
+		for(int a = 0; a < size(); a++)
+			if(_sheet[0][a]->getTag() == tag)
+				return *_sheet[0][a];
+		return *_sheet[0][size()];
 	}
 
 	Sprite& operator[](unsigned int index)
 	{
-		return *_sheet[index];
+		return *_sheet[0][index];
 	}
 private:
-	Sprite * * _sheet;
-	unsigned short _numSprites = 0;
+	std::vector<Sprite*>* _sheet = new std::vector<Sprite*>;
+	//unsigned short _numSprites = 0;
+};
+
+struct Animation
+{
+	void create(SpriteSheet& frames)
+	{
+		*m_sheet = frames;
+	}
+
+	Sprite animate(bool repeat = true)
+	{
+
+	}
+
+	void reset()
+	{}
+
+	void setFPS(ushort fps)
+	{}
+
+	void setCurrentFrame(ushort frame)
+	{
+		m_currentFrame = frame;
+	}
+private:
+	SpriteSheet * m_sheet = new SpriteSheet;
+	ushort m_fps, m_currentFrame;
 };
 
 struct MouseInput
 {
-	COORD position {0,0};
+	COORD position{0,0};
 	short vertWheel, horiWheel;
 	std::map <short, bool> buttons;
 	bool doubleClick;

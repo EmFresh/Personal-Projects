@@ -11,6 +11,8 @@
 using namespace std;
 namespace fs = filesystem;
 
+typedef unsigned short ushort;
+
 #pragma region Global Variables
 
 
@@ -19,17 +21,17 @@ EmConsole *con = new EmConsole("RockBand Console");
 SpriteSheet *track = new SpriteSheet, *notes = new SpriteSheet, *logo = new SpriteSheet;
 Sprite *box = new Sprite;
 vector<vector<int>>*disiNotes = new vector<vector<int>>(5, vector<int>());
-vector<int>*fretColour = new vector<int> {FG_GREEN,FG_RED,FG_YELLOW,
-FG_BLUE,FG_PURPLE}, *noteColour = new vector<int> {FG_GREEN | FG_INTENSIFY,FG_RED | FG_INTENSIFY,
+vector<int>*fretColour = new vector<int>{FG_GREEN,FG_RED,FG_YELLOW,
+FG_BLUE,FG_PURPLE}, *noteColour = new vector<int>{FG_GREEN | FG_INTENSIFY,FG_RED | FG_INTENSIFY,
 FG_YELLOW | FG_INTENSIFY,FG_BLUE | FG_INTENSIFY,FG_PURPLE | FG_INTENSIFY};
-vector <int> *lines = new vector <int>(1, -2);
+vector <int> *lines = new vector <int>;
 
 vector<vector<long>>*song = new vector<vector<long>>(5), *songTemp = new vector<vector<long>>(5);
 long *lastNote = new long, *incrimentCounter = new long;
-int trackSpeed[5], colliCount[5], speedCount = 1000, barCount, createSpeed,
-createCountCounter = speedCount, centerTrack, countAmount[5], notesHit, noteOffset = 10, fretOffset;
-float incriment = -1, lastIncriment, createCount;
-bool pressed[5], stroke, start = true, create;
+int trackSpeed[5], colliCount[5], barCount, centerTrack, countAmount[5], notesHit, noteOffset = 0, fretOffset, fretboardPosition, speed = 60, create;
+float  fps = 0;
+long incriment = -1;
+bool pressed[5], stroke, start = true;
 KeyInput key;
 
 int vol, mute, res, songChoice, songChoiceCounter;
@@ -63,6 +65,8 @@ bool startScreen();
 void songChoiceMovement(int);
 bool createdSongList();
 bool songList();
+void calculateFPS();
+void controles();
 #pragma endregion
 
 #pragma region File I/O
@@ -81,23 +85,20 @@ void saveSong()
 	int count = 0;
 	for(auto &a : *song)
 	{
-	//	OutputDebugString((to_string(0)+"\n").c_str());
+		//	OutputDebugString((to_string(0)+"\n").c_str());
 		songs << a.size() << endl;
 		for(auto &b : a)
 			songs << b;
 		songs << endl;
 	}
 	songs << *songName << endl;
-	songs << *endT - *startT;
 	songs.close();
 }
 void openSong(string &songFile)
 {
 	string name("songs/" + songFile + ".song");
 	fstream songs(name, ios::in | ios::binary);
-	//song.clear();
 	int c;
-	//OutputDebugString("opening song\n");
 	for(auto &a : *song)
 	{
 		songs >> c;
@@ -107,21 +108,14 @@ void openSong(string &songFile)
 		{
 			a.push_back(0);
 			songs >> a[b];
-		//	OutputDebugString((to_string(a[b]) + "\n").c_str());
+			//	OutputDebugString((to_string(a[b]) + "\n").c_str());
 		}
 	}
 	getline(songs >> ws, *songName);
-	//songName->pop_back();//for some reason a "\r" pops up (idk y)
-	songs >> *endT;
+
 	songs.close();
 
-	*songTemp = *song;
-	*lastNote = 0;
-	for(auto &a : *songTemp)
-		if(a.size() > 0)
-			if(a[a.size() - 1] < *lastNote)
-				*lastNote = a[a.size() - 1];
-	OutputDebugStringA(("endT: " + *songName + '\n').c_str());
+	OutputDebugStringA(("Now Playing: " + *songName + '\n').c_str());
 
 }
 #pragma endregion	
@@ -130,7 +124,8 @@ void openSong(string &songFile)
 
 void createButtonPress()
 {
-	clock_t tmp = clock();
+	incriment = sound->getPosition();
+
 	//Key Stroke
 	if(key.stroke(VK_RETURN))
 		saveSong();
@@ -141,21 +136,19 @@ void createButtonPress()
 		reset();
 	}
 
-	//Key Pressed
 	static char frets[] = {'A','S','D','F','G'};
+
+	//Key Pressed
+	//strum
 	if((key.press(VK_UP) || key.press(VK_DOWN)) && !stroke)
 	{
-
 		stroke = true;
-
 		for(short a = 0; a < 5; a++)
 			if(key.press(frets[a]))
-			{			 				
-				*endT = tmp;
-				((*song)[a]).push_back(-(createCount)+con->getHeight() - 5);
-			}
+				((*song)[a]).push_back(-incriment);
 	}
 
+	//fret light
 	for(short a = 0; a < 5; a++)
 		if(key.press(frets[a]))
 		{
@@ -164,10 +157,13 @@ void createButtonPress()
 				(*fretColour)[a] += 8;
 		}
 
+
 	//Key Released
+	//strum
 	if((key.release(VK_UP) && key.release(VK_DOWN)))
 		stroke = false;
 
+	//fret light
 	for(short a = 0; a < 5; a++)
 		if(key.release(frets[a]))
 		{
@@ -178,28 +174,15 @@ void createButtonPress()
 
 }
 
-void createSongMovement()
-{
-	incriment = (clock() - *tsT) / (CLOCKS_PER_SEC*.1);
-
-	if(incriment >= 1)
-		*tsT = clock();
-
-	createCount += incriment;
-	//OutputDebugStringA((to_string(createCount)+'\n').c_str());
-
-}
-
 void createTrack()
 {
 	con->toConsoleBuffer((*track)[0], centerTrack, 0);
-	//barLines();
-	createSongMovement();
+	barLines();
 	createButtonPress();
 
 	// draws frets that lightup when key is pressed
 	for(short a = 0; a < 5; a++)
-		con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), con->getHeight() - 5, (*fretColour)[a]);
+		con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), fretboardPosition, (*fretColour)[a]);
 }
 #pragma endregion
 
@@ -218,7 +201,7 @@ void percent()
 void missFX(int seed)
 {
 	srand(seed);
-	string miss[] {"sfx/Miss_1.wav","sfx/Miss_2.wav","sfx/Miss_3.wav","sfx/Miss_4.wav"};
+	string miss[]{"sfx/Miss_1.wav","sfx/Miss_2.wav","sfx/Miss_3.wav","sfx/Miss_4.wav"};
 	sound->setAudio(miss[rand() % 4]);
 	sound->play();
 }
@@ -229,16 +212,16 @@ bool collision()
 	{
 		if(colliCount[a] < (*songTemp)[a].size())
 		{
-			if((*songTemp)[a][colliCount[a]] + noteOffset > con->getHeight() - 2)
+			if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition + 3)
 				colliCount[a]++;
 		} else
 			if(colliCount[a] + 1 < (*songTemp)[a].size())
-				if((*songTemp)[a][colliCount[a] + 1] + noteOffset > con->getHeight() - 8)
+				if((*songTemp)[a][colliCount[a] + 1] + noteOffset > fretboardPosition - 3)
 					colliCount[a] ++;
 
 		if(pressed[a])
 			if(colliCount[a] < (*songTemp)[a].size())
-				if((*songTemp)[a][colliCount[a]] + noteOffset > con->getHeight() - 8)
+				if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition - 3)
 					return true;
 	}
 	return false;
@@ -249,7 +232,7 @@ void noteDelete()
 	for(int a = 0; a < songTemp->size(); a++)
 		if(pressed[a])
 			if(colliCount[a] < (*songTemp)[a].size())
-				if((*songTemp)[a][colliCount[a]] + noteOffset > con->getHeight() - 8 && (*songTemp)[a][colliCount[a]] + noteOffset <= con->getHeight() - 2)
+				if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition - 3 && (*songTemp)[a][colliCount[a]] + noteOffset <= fretboardPosition + 3)
 					notesHit++,
 					(*disiNotes)[a].push_back(colliCount[a]);
 
@@ -276,17 +259,16 @@ void drawLines()
 {
 	int barNum = 4;
 	for(int a = 0; a < lines->size(); a++)
-	{
 		if(incriment > 0)
-			(*lines)[a] += incriment;
-		con->toConsoleBuffer(L"______________________________________________________________", centerTrack + 1, (*lines)[a],
+			con->toConsoleBuffer(L"______________________________________________________________", centerTrack + 1, ((*lines)[a] + incriment / speed),
 			(a + (barCount)) % barNum == 0 ? FG_WHITE | FG_INTENSIFY : FG_WHITE);
-	}
 
-	for(; (*lines)[lines->size() - 1] > (float)(*notes)[0].getHeight();)
-		lines->push_back((*lines)[lines->size() - 1] - (float)(*notes)[0].getHeight() * 2);
+	//create new barlines
+	for(; ((*lines)[lines->size() - 1] + incriment / speed) > (*notes)[0].getHeight();)
+		lines->push_back((*lines)[lines->size() - 1] - (*notes)[0].getHeight() * 2);
 
-	while((*lines)[0] > con->getHeight())
+	//deleat old barlines
+	while(((*lines)[0] + incriment / speed) > con->getHeight())
 	{
 		lines->erase(lines->begin());
 		(barCount)++;
@@ -302,13 +284,13 @@ void barLines()
 {
 	if(song->size() > 0)
 	{
-		incriment = -round((clock() - *tsT) / double(*endT) * double(*lastNote)) - lastIncriment;
-		lastIncriment += incriment;
+		//incriment = -round((clock() - *tsT) / double(*endT) * double(*lastNote)) - lastIncriment;
+		//incriment = -round((sound->getPosition()) / double(*endT) * double(*lastNote)) - lastIncriment;
+		incriment = sound->getPosition();
 		drawLines();
 	} else
 	{
-		static clock_t in2;
-		incriment = floor((((in2 = clock()) - *tsT) / (*endT / (*lastNote - con->getHeight()))));
+		incriment = sound->getPosition();
 		drawLines();
 
 	}
@@ -317,6 +299,9 @@ void barLines()
 void playSongMovement()
 {
 	//OutputDebugString((to_string(songTemp->size()) + "\n").c_str());
+	//incriment = sound->getPosition();
+
+
 	for(short a = 0; a < songTemp->size(); a++)
 	{
 		for(int b = countAmount[a]; b < (*songTemp)[a].size(); b++)
@@ -324,22 +309,21 @@ void playSongMovement()
 
 			//OutputDebugString((to_string(b)+", " ).c_str());
 
-			// moves the song along
-			(*songTemp)[a][b] += round(incriment);
 
-			// checks weather or not to draw notes to screen
-			if(b > countAmount[a] && (*songTemp)[a][b] <= -3)
-				if((*songTemp)[a][b - 1] + noteOffset >= (abs((*song)[a][b]) - abs((*song)[a][b - 1])))
-					(*songTemp)[a][b] = (*songTemp)[a][b - 1] - (abs((*song)[a][b]) - abs((*song)[a][b - 1]));
-				else
-					break;
+			// moves the song along
+			(*songTemp)[a][b] = (*song)[a][b] / speed + incriment / speed + fretboardPosition;
+
+			if((*songTemp)[a][b] <= -3)
+				break;
+
+			//note dropoff
+			if((*songTemp)[a][b] + noteOffset > con->getHeight())
+				countAmount[a]++;
 
 			if(b > countAmount[a])
-				if((*songTemp)[a][b] > -3 && ((*songTemp)[a][b - 1] >= (abs((*song)[a][b]) - abs((*song)[a][b - 1]))))
+				if(((*songTemp)[a][b - 1] >= (abs((*songTemp)[a][b]) - abs((*songTemp)[a][b - 1]))))
 				{
-					//note dropoff
-					if((*songTemp)[a][b - 1] + noteOffset > con->getHeight())
-						countAmount[a]++;
+
 
 					if((*disiNotes)[a].size() > 0)
 						if(b == (*disiNotes)[a][0])
@@ -348,13 +332,14 @@ void playSongMovement()
 
 			if(!invisable(a, b))
 				if((*songTemp)[a][b] + noteOffset > -3 && (*songTemp)[a][b] + noteOffset < con->getHeight())
-					if((*songTemp)[a][b] + noteOffset < con->getHeight() - 5)
-						con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
+					if((*songTemp)[a][b] + noteOffset < fretboardPosition + notes[0][0].getHeight())
+						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
 					else
-						con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), (*songTemp)[a][b] + noteOffset, FG_RED | FG_INTENSIFY);
+						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, FG_RED | FG_INTENSIFY);
 		}
 		//OutputDebugString((to_string(countAmount[a]) + "\n").c_str());
 	}
+	//lastIncriment = incriment;
 }
 
 void playButtonPress()
@@ -417,7 +402,7 @@ void playTrack()
 
 	// draws frets that lightup when key is pressed
 	for(short a = 0; a < 5; a++)
-		con->toConsoleBuffer((*notes)[0], (centerTrack)+(a * 13 + 1), con->getHeight() - 5, (*fretColour)[a]);
+		con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), fretboardPosition, (*fretColour)[a]);
 }
 #pragma endregion
 
@@ -463,7 +448,7 @@ bool songList()
 
 			if(p.substr(p.find_last_of('.') + 1) == L"wav" || p.substr(p.find_last_of('.') + 1) == L"mp3")
 			{
-				songPath.push_back(p=cDir(p));
+				songPath.push_back(p = cDir(p));
 				songs.push_back(p.substr(last = (p.find_last_of('/') + 1), p.find_last_of('.') - last));
 
 				con->toConsoleBuffer(L"Song List", startWidth - 4, startHeight - 2);
@@ -478,7 +463,7 @@ bool songList()
 		con->drawConsole();
 		songs.clear();
 		songPath.clear();
-		if(key.stroke('Q'))
+		if(key.stroke('S'))
 		{
 			*songName = "";
 			return false;
@@ -507,8 +492,8 @@ bool createdSongList()
 			con->toConsoleBuffer(L"----------------------------", startWidth - 14, startHeight - 1);
 			if(p.substr(p.find_last_of('.') + 1) == L"song")
 			{
-			//	OutputDebugStringA("Entered if Statement\n");
-				songPath.push_back(p=cDir(p));
+				//	OutputDebugStringA("Entered if Statement\n");
+				songPath.push_back(p = cDir(p));
 				songs.push_back(p.substr(last = (p.find_last_of('/') + 1), p.find_last_of('.') - last));
 				str = wstring(songs[count].begin(), songs[count].end());
 				con->toConsoleBuffer(str, startWidth - (str.size() / 2), startHeight + count, (songChoice == count ? colours[1] : colours[0]));
@@ -539,42 +524,44 @@ void reset()
 	for(auto &a : *disiNotes)a.clear();
 
 	sound->setAudio(*songName);
-	sound->stop();
+	sound->stopAll();
 	sound->play();
 	*songTemp = *song;
 	*incrimentCounter = 0;
-	lines->clear();
-	lines->push_back(-2);
-	barCount = createCountCounter = songChoice = 0;
-	createCount = 0;
+	lines->clear(),
+		lines->push_back(con->getHeight() - 25);
+	barCount = songChoice = 0;
 	incriment = -1;
-	lastIncriment = 0;
 	start = false;
 	notesHit = 0;
-	*tsT = clock();
+	//*tsT = clock();
+	*tsT = 0;
 	*startT = clock();
+}
+
+void controles()
+{
+	Sprite controles;
+	controles.create("Controles.txt");
+	while(!key.stroke('A') && !key.stroke('S'))
+	con->toConsoleBuffer(controles, con->getWidth()/2-controles.getWidth()/2, con->getHeight() / 2 - controles.getHeight() / 2),
+	con->drawConsole();
 }
 
 bool startScreen()
 {
-	int x = con->getWidth() / 2 - box->getWidth() / 2, y = con->getHeight() / 2 - (2 * (box->getHeight() / 2));
-	int colours[] = {FG_WHITE,FG_GREEN};
-
+	int x = con->getWidth() / 2 - box->getWidth() / 2, y = con->getHeight() / 2 - (2 * (box->getHeight() / 2)),
+		colours[] = {FG_WHITE,FG_GREEN}, numBoxes = 3;
+	bool exit = false;
 	con->placeConsoleCenter();
 	Sprite thing;
-	vector<wstring>* thing2 = new  vector<wstring> {1,L" "};
-	thing.create(thing2);
-	delete thing2;
 
-	while(!key.stroke('A'))
+	while(!exit)
 	{
 
 		MouseInput mouse = con->mouseState();
-
-
-
 		con->toConsoleBuffer(to_wstring(mouse.position.X).c_str(), 0, 0);
-		if(box->collision(thing, {short(x),short(y)}, mouse.position))
+		if(box->boxCollision(thing, {short(x),short(y)}, mouse.position))
 			con->toConsoleBuffer(L"mouse colision", 0, 0);
 
 		for(auto &a : mouse.buttons)
@@ -589,35 +576,72 @@ bool startScreen()
 			}
 
 		x = con->getWidth() / 2 - (*box).getWidth() / 2, y = con->getHeight() / 2 - (2 * (box->getHeight() / 2));
-		if(key.stroke(VK_UP) || key.stroke(VK_DOWN))
-			create = !create;
+		if(key.stroke(VK_UP))
+			create--;
+		if(key.stroke(VK_DOWN))
+			create++;
+
+		if(create >= numBoxes)
+			create = 0;
+		if(create < 0)
+			create = numBoxes-1;
 
 		con->toConsoleBuffer((*logo)[0], con->getWidth() / 2 - (*logo)[0].getWidth() / 2, 12, FG_RED | FG_INTENSIFY);
-		con->toConsoleBuffer(*box, x, y, colours[!create]);
-		con->toConsoleBuffer(L"Single Play", x + 3, y + 2, colours[!create]);
-		con->toConsoleBuffer(*box, x, y + 5, colours[create]);
-		con->toConsoleBuffer(L"Create", x + 6, y + 7, colours[create]);
+		con->toConsoleBuffer(*box, x, y, colours[create == 0]);
+		con->toConsoleBuffer(L"Single Play", x + 3, y + 2, colours[create == 0]);
+		con->toConsoleBuffer(*box, x, y + 5, colours[create == 1]);
+		con->toConsoleBuffer(L"Create", x + 6, y + 7, colours[create == 1]);
+		con->toConsoleBuffer(*box, x, y + 10, colours[create == 2]);
+		con->toConsoleBuffer(L"Controles", x + 4, y + 12, colours[create == 2]);
 
 		con->drawConsole();
 		if(key.stroke('Q'))
 			return false;
+
+		if(key.stroke('A'))
+			if(create == 0)	//play song
+			{
+				if(exit = createdSongList())
+					openSong(*songName);
+
+			} else if(create == 1)//create	song
+			{
+				if(exit = songList())
+					for(auto &a : *song)
+						a.clear();
+			} else if(create== 2)
+			{
+				controles();
+			}
 	}
 
-	if(create == 0)	//play song
-	{
-		createdSongList();
-		openSong(*songName);
-	} else //create	song
-	{
-		songList();
-		for(auto &a : *song)
-			a.clear();
-	}
+
 
 	reset();
 	return true;
 }
 #pragma endregion
+
+void calculateFPS()
+{
+	static const int SAMPLE = 30;
+	static short count;
+	static float frameTimes[SAMPLE];
+
+	static clock_t timer;
+
+	frameTimes[count++] = 1.f / (float(clock() - timer) / CLOCKS_PER_SEC);
+	if(count == SAMPLE)
+	{
+		count = 0;
+		fps = 0;
+		for(auto &a : frameTimes)
+			fps += a;
+		fps /= SAMPLE;
+	}
+
+	timer = clock();
+}
 
 void main()
 {
@@ -644,7 +668,7 @@ void main()
 	while(true)
 		if(startScreen())
 		{
-			//*tsT = clock();
+			fretboardPosition = con->getHeight() - 7;
 
 			*diffT = clock();
 			while(!key.stroke('Q'))
@@ -656,19 +680,22 @@ void main()
 				else
 					playTrack();
 
-#ifdef _DEBUG
-				static int counter, c2;
-				con->toConsoleBuffer(wstring(L"fps: " + to_wstring(c2)).c_str(), 0, 1);
+				#ifdef _DEBUG
+				calculateFPS();
+				//static int counter, c2;
+				wchar_t str[20];
+				swprintf_s(str, L"%.2f", fps);
+				con->toConsoleBuffer((wstring(L"fps: ") + str).c_str(), 0, 1);
 
-				if(clock() - *diffT >= CLOCKS_PER_SEC)
-				{
-					c2 = counter;
-					counter = 0;
-					*diffT = clock();
-				}
-
-				counter++;
-#endif // _DEBUG
+				//if(clock() - *diffT >= CLOCKS_PER_SEC)
+				//{
+				//	c2 = counter;
+				//	counter = 0;
+				//	*diffT = clock();
+				//}
+				//
+				//counter++;
+				#endif // _DEBUG
 
 				con->drawConsole();
 			}

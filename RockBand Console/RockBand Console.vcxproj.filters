@@ -58,6 +58,9 @@
     <Text Include="Logo.txt">
       <Filter>Resource Files</Filter>
     </Text>
+    <Text Include="Controles.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Media Include="GameJam(Full).wav">

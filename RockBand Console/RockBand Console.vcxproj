@@ -142,6 +142,7 @@
     <ClInclude Include="AudioPlayer.h" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="Controles.txt" />
     <Text Include="Logo.txt" />
     <Text Include="Notes.txt" />
     <Text Include="Track.txt" />

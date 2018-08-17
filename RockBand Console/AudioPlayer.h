@@ -1,7 +1,6 @@
 #pragma once
 #include <Windows.h>
 #include<string>
-#include<iostream>
 //#pragma comment(lib,"winmm.lib")
 
 /***Structs***/
@@ -14,6 +13,7 @@ struct AudioInfo
 	const char**instanceNames;
 	unsigned int inst;
 };
+
 /***Classes***/
 class AudioPlayer
 {
@@ -26,8 +26,6 @@ public:
 	AudioPlayer(std::string audio);
 
 	void setInst(int);
-
-	void setCurrentInst();
 
 	~AudioPlayer();
 
@@ -94,6 +92,10 @@ public:
 	Highest volume 1.0f
 	*/
 	void setVolume(float vol = 1);
+
+	unsigned int getPosition();
+
+	void setPosition(unsigned int ms);
 
 private:
 	/****Utility Functions****/
