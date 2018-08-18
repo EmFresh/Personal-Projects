@@ -273,8 +273,7 @@ void noteDelete()
 						sound->setVolume(.3);
 						return;
 					}
-				}
-				else
+				} else
 				{
 					*t = thread(missFX, rand());
 					t->detach();
@@ -282,9 +281,9 @@ void noteDelete()
 					return;
 				}
 
-		for(auto&a : num)
-			notesHit++,
-			(*disiNotes)[a].push_back(colliCount[a]++);
+				for(auto&a : num)
+					notesHit++,
+					(*disiNotes)[a].push_back(colliCount[a]++);
 	}
 }
 
@@ -392,10 +391,8 @@ void playSongMovement()
 					  //con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
 
 					  ///Colision Test
-						if(b != colliCount[a])
-							con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
-						else
-							con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, FG_INTENSIFY | FG_WHITE);
+						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, 
+											 b != colliCount[a] ? (*noteColour)[a] : FG_INTENSIFY | FG_WHITE);
 
 					} else
 						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, FG_RED | FG_INTENSIFY);
