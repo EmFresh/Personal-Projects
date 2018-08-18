@@ -12,15 +12,15 @@ using namespace std;
 namespace fs = filesystem;
 
 typedef unsigned short ushort;
+typedef unsigned int uint;
 
 #pragma region Global Variables
-
 
 EmConsole *con = new EmConsole("RockBand Console");
 
 SpriteSheet *track = new SpriteSheet, *notes = new SpriteSheet, *logo = new SpriteSheet;
-Sprite *box = new Sprite;
-vector<vector<int>>*disiNotes = new vector<vector<int>>(5, vector<int>());
+Sprite *box = new Sprite, *pauseMenu = new Sprite;
+vector<vector<uint>>*disiNotes = new vector<vector<uint>>(5, vector<uint>());
 vector<int>*fretColour = new vector<int>{FG_GREEN,FG_RED,FG_YELLOW,
 FG_BLUE,FG_PURPLE}, *noteColour = new vector<int>{FG_GREEN | FG_INTENSIFY,FG_RED | FG_INTENSIFY,
 FG_YELLOW | FG_INTENSIFY,FG_BLUE | FG_INTENSIFY,FG_PURPLE | FG_INTENSIFY};
@@ -28,23 +28,24 @@ vector <int> *lines = new vector <int>;
 
 vector<vector<long>>*song = new vector<vector<long>>(5), *songTemp = new vector<vector<long>>(5);
 long *lastNote = new long, *incrimentCounter = new long;
-int trackSpeed[5], colliCount[5], barCount, centerTrack, countAmount[5], notesHit, noteOffset = 0, fretOffset, fretboardPosition, speed = 60, create;
+int trackSpeed[5], barCount, centerTrack, countAmount[5], notesHit, noteOffset = 0, fretOffset, fretboardPosition, speed = 60, create;
+uint colliCount[5];
 float  fps = 0;
 long incriment = -1;
-bool pressed[5], stroke, start = true;
-KeyInput key;
+bool pressed[5], stroke, start = true, paused = false;
 
-int vol, mute, res, songChoice, songChoiceCounter;
-string* songName = new string();
+int vol, mute, songChoice, songChoiceCounter;
+string* songName = new string;
 wstring *percentstr = new wstring;
-clock_t* tsT = new clock_t, *diffT = new clock_t, *startT = new clock_t, *endT = new clock_t;
+//clock_t* tsT = new clock_t, *diffT = new clock_t, *startT = new clock_t;
 thread *t = new thread, *t2 = new thread;
 AudioPlayer* sound = new AudioPlayer();//.wav files can only be 12 characters long
+
 #pragma endregion
 
 #pragma region Deffinitions
 void saveSong();
-void openSong(string&);
+void openSong(string);
 bool collision();
 void noteDelete();
 wstring cDir(wstring);
@@ -59,7 +60,6 @@ float notesInSong(vector<vector<long>>*);
 void percent();
 void playTrack();
 void createButtonPress();
-void createSongMovement();
 void createTrack();
 bool startScreen();
 void songChoiceMovement(int);
@@ -67,6 +67,8 @@ bool createdSongList();
 bool songList();
 void calculateFPS();
 void controles();
+void playPauseMenu();
+void createPauseMenu();
 #pragma endregion
 
 #pragma region File I/O
@@ -94,7 +96,7 @@ void saveSong()
 	songs << *songName << endl;
 	songs.close();
 }
-void openSong(string &songFile)
+void openSong(string songFile)
 {
 	string name("songs/" + songFile + ".song");
 	fstream songs(name, ios::in | ios::binary);
@@ -105,11 +107,10 @@ void openSong(string &songFile)
 		a.clear();
 		//OutputDebugString((to_string(a.size())+"\n").c_str());
 		for(int b = 0; b < c; b++)
-		{
-			a.push_back(0);
+			a.push_back(0),
 			songs >> a[b];
-			//	OutputDebugString((to_string(a[b]) + "\n").c_str());
-		}
+		//	OutputDebugString((to_string(a[b]) + "\n").c_str());
+
 	}
 	getline(songs >> ws, *songName);
 
@@ -122,14 +123,17 @@ void openSong(string &songFile)
 
 #pragma region Create
 
+void createPauseMenu()
+{}
+
 void createButtonPress()
 {
 	incriment = sound->getPosition();
 
 	//Key Stroke
-	if(key.stroke(VK_RETURN))
+	if(KeyInput::stroke(VK_RETURN))
 		saveSong();
-	if(key.stroke('R'))
+	if(KeyInput::stroke('R'))
 	{
 		for(auto &a : *song)
 			a.clear();
@@ -140,17 +144,17 @@ void createButtonPress()
 
 	//Key Pressed
 	//strum
-	if((key.press(VK_UP) || key.press(VK_DOWN)) && !stroke)
+	if((KeyInput::press(VK_UP) || KeyInput::press(VK_DOWN)) && !stroke)
 	{
 		stroke = true;
 		for(short a = 0; a < 5; a++)
-			if(key.press(frets[a]))
+			if(KeyInput::press(frets[a]))
 				((*song)[a]).push_back(-incriment);
 	}
 
 	//fret light
 	for(short a = 0; a < 5; a++)
-		if(key.press(frets[a]))
+		if(KeyInput::press(frets[a]))
 		{
 			pressed[a] = true;
 			if((*fretColour)[a] < 8)
@@ -160,12 +164,12 @@ void createButtonPress()
 
 	//Key Released
 	//strum
-	if((key.release(VK_UP) && key.release(VK_DOWN)))
+	if((KeyInput::release(VK_UP) && KeyInput::release(VK_DOWN)))
 		stroke = false;
 
 	//fret light
 	for(short a = 0; a < 5; a++)
-		if(key.release(frets[a]))
+		if(KeyInput::release(frets[a]))
 		{
 			pressed[a] = false;
 			if((*fretColour)[a] > 8)
@@ -208,34 +212,80 @@ void missFX(int seed)
 
 bool collision()
 {
+	bool colli = false;
 	for(int a = 0; a < songTemp->size(); a++)
 	{
-		if(colliCount[a] < (*songTemp)[a].size())
-		{
-			if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition + 3)
-				colliCount[a]++;
-		} else
-			if(colliCount[a] + 1 < (*songTemp)[a].size())
-				if((*songTemp)[a][colliCount[a] + 1] + noteOffset > fretboardPosition - 3)
-					colliCount[a] ++;
+
+		while(colliCount[a] < (*songTemp)[a].size() &&
+			(*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition + 3)
+			colliCount[a]++;
+
+		//if(colliCount[a] + 1 < (*songTemp)[a].size())
+		//	if((*songTemp)[a][colliCount[a] + 1] + noteOffset > fretboardPosition - 3)
+		//		colliCount[a] ++;
 
 		if(pressed[a])
 			if(colliCount[a] < (*songTemp)[a].size())
 				if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition - 3)
-					return true;
+					colli = true;
 	}
-	return false;
+	return colli;
 }
 
 void noteDelete()
 {
-	for(int a = 0; a < songTemp->size(); a++)
-		if(pressed[a])
-			if(colliCount[a] < (*songTemp)[a].size())
-				if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition - 3 && (*songTemp)[a][colliCount[a]] + noteOffset <= fretboardPosition + 3)
-					notesHit++,
-					(*disiNotes)[a].push_back(colliCount[a]);
+	short numPressed = 0;
+	static vector<int> num;
+	num.clear();
 
+
+	for(int a = 0; a < songTemp->size(); a++)
+		//if(pressed[a])
+		if(colliCount[a] < (*songTemp)[a].size())
+			if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition - 3 && (*songTemp)[a][colliCount[a]] + noteOffset <= fretboardPosition + 3)
+				num.push_back(a);
+
+	if(num.size() == 1)
+	{
+		for(int a = 4; a > num[0]; a--)
+			if(pressed[a])
+			{
+				*t = thread(missFX, rand());
+				t->detach();
+				sound->setVolume(.3);
+				return;
+			}
+
+		if(pressed[num[0]])
+			notesHit++,
+			(*disiNotes)[num[0]].push_back(colliCount[num[0]]++);
+	} else
+	{
+		int count = 0;
+		for(int a = 0; a < 5; a++)
+			if(pressed[a])
+				if(count < num.size())
+				{
+					if(num[count++] != a)
+					{
+						*t = thread(missFX, rand());
+						t->detach();
+						sound->setVolume(.3);
+						return;
+					}
+				}
+				else
+				{
+					*t = thread(missFX, rand());
+					t->detach();
+					sound->setVolume(.3);
+					return;
+				}
+
+		for(auto&a : num)
+			notesHit++,
+			(*disiNotes)[a].push_back(colliCount[a]++);
+	}
 }
 
 bool invisable(int fret, int check)
@@ -260,9 +310,12 @@ void drawLines()
 	int barNum = 4;
 	for(int a = 0; a < lines->size(); a++)
 		if(incriment > 0)
-			con->toConsoleBuffer(L"______________________________________________________________", centerTrack + 1, ((*lines)[a] + incriment / speed),
-			(a + (barCount)) % barNum == 0 ? FG_WHITE | FG_INTENSIFY : FG_WHITE);
-
+			if(!((a + (barCount)) % barNum))
+				con->toConsoleBuffer(L"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", centerTrack + 1, ((*lines)[a] + incriment / speed),
+									 FG_WHITE | FG_INTENSIFY);
+			else
+				con->toConsoleBuffer(L"──────────────────────────────────────────────────────────────", centerTrack + 1, ((*lines)[a] + incriment / speed),
+									 FG_WHITE);
 	//create new barlines
 	for(; ((*lines)[lines->size() - 1] + incriment / speed) > (*notes)[0].getHeight();)
 		lines->push_back((*lines)[lines->size() - 1] - (*notes)[0].getHeight() * 2);
@@ -316,14 +369,15 @@ void playSongMovement()
 			if((*songTemp)[a][b] <= -3)
 				break;
 
-			//note dropoff
-			if((*songTemp)[a][b] + noteOffset > con->getHeight())
-				countAmount[a]++;
+
 
 			if(b > countAmount[a])
 				if(((*songTemp)[a][b - 1] >= (abs((*songTemp)[a][b]) - abs((*songTemp)[a][b - 1]))))
 				{
 
+					//note dropoff
+					if((*songTemp)[a][b - 1] + noteOffset > con->getHeight())
+						countAmount[a]++;
 
 					if((*disiNotes)[a].size() > 0)
 						if(b == (*disiNotes)[a][0])
@@ -333,8 +387,17 @@ void playSongMovement()
 			if(!invisable(a, b))
 				if((*songTemp)[a][b] + noteOffset > -3 && (*songTemp)[a][b] + noteOffset < con->getHeight())
 					if((*songTemp)[a][b] + noteOffset < fretboardPosition + notes[0][0].getHeight())
-						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
-					else
+					{
+						///Normal
+					  //con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
+
+					  ///Colision Test
+						if(b != colliCount[a])
+							con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
+						else
+							con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, FG_INTENSIFY | FG_WHITE);
+
+					} else
 						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, FG_RED | FG_INTENSIFY);
 		}
 		//OutputDebugString((to_string(countAmount[a]) + "\n").c_str());
@@ -342,46 +405,66 @@ void playSongMovement()
 	//lastIncriment = incriment;
 }
 
+void playPauseMenu()
+{
+	sound->pause();
+	if(KeyInput::press('S') || KeyInput::press('Q') || KeyInput::stroke(VK_BACK))
+	{
+		sound->resume();
+		paused = false;
+		return;
+	}
+	paused = true;
+
+	con->toConsoleBuffer(*pauseMenu, con->getWidth() / 2 - (*pauseMenu).getWidth() / 2, con->getHeight() / 3 - (*pauseMenu).getHeight() / 2);
+
+}
+
 void playButtonPress()
 {
-	//Key Stroke
-	if(key.stroke('R'))
-		reset();
-
-	//Key Pressed
-	if((key.press(VK_UP) || key.press(VK_DOWN)) && !stroke)
-	{
-		if(collision())
-		{
-			noteDelete();
-			sound->setVolume();
-		} else
-		{
-			*t = thread(missFX, rand());
-			t->detach();
-			sound->setVolume(.3);
-		}
-		stroke = true;
-	}
 	static char frets[] = {'A','S','D','F','G'};
-	for(short a = 0; a < 5; a++)
-		if(key.press(frets[a]))
+
+	//Key Stroke
+	if(KeyInput::stroke('R'))
+		reset();
+	if(KeyInput::stroke(VK_RETURN) || paused)
+		playPauseMenu();
+
+	if(!paused)
+	{
+		//Strum released
+		if((KeyInput::release(VK_UP) && KeyInput::release(VK_DOWN)))
+			stroke = false;
+		//Strum pressed
+		if((KeyInput::press(VK_UP) || KeyInput::press(VK_DOWN)) && !stroke)
 		{
-			pressed[a] = true;
-			if((*fretColour)[a] < 8)
-				(*fretColour)[a] += 8;
+			if(collision())
+			{
+				noteDelete();
+				sound->setVolume();
+			} else
+			{
+				*t = thread(missFX, rand());
+				t->detach();
+				sound->setVolume(.3);
+			}
+			stroke = true;
 		}
+	}
 
-
-	//Key Released
-	if((key.release(VK_UP) && key.release(VK_DOWN)))
-		stroke = false;
 	for(short a = 0; a < 5; a++)
-		if(key.release(frets[a]))
+		if(KeyInput::release(frets[a]))
 		{
 			pressed[a] = false;
 			if((*fretColour)[a] > 8)
 				(*fretColour)[a] -= 8;
+		}
+	for(short a = 0; a < 5; a++)
+		if(KeyInput::press(frets[a]))
+		{
+			pressed[a] = true;
+			if((*fretColour)[a] < 8)
+				(*fretColour)[a] += 8;
 		}
 
 }
@@ -414,18 +497,18 @@ void songChoiceMovement(int size)
 	if(songChoiceCounter++ == delay)
 	{
 		songChoiceCounter = 0;
-		if(key.press(VK_DOWN))
+		if(KeyInput::press(VK_DOWN))
 			if(songChoice < size - 1)
 				songChoice++;
 			else
 				songChoice = 0;
-		else if(key.press(VK_UP))
+		else if(KeyInput::press(VK_UP))
 			if(songChoice > 0)
 				songChoice--;
 			else
 				songChoice = size - 1;
 	}
-	if(key.release(VK_DOWN) && key.release(VK_UP))
+	if(KeyInput::release(VK_DOWN) && KeyInput::release(VK_UP))
 		songChoiceCounter = delay;
 
 }
@@ -434,12 +517,14 @@ bool songList()
 {
 	/*File Management Test*/
 
-	wstring path = L"./", str, p;
+	wstring path = L"./", str, p, p2;
 	vector<wstring>songs, songPath;
 	//vector<string> title {"",""};
 	int colours[] = {FG_WHITE,FG_GREEN};
+	wstring  playing, lastPlayed;
+	songChoice = 0;
 
-	while(!key.stroke('A'))
+	while(!KeyInput::stroke('A'))
 	{
 		int last, count = 0, startHeight = con->getHeight() / 2 - songs.size(), startWidth = con->getWidth() / 2;
 		for(auto &a : fs::directory_iterator(path))
@@ -448,6 +533,21 @@ bool songList()
 
 			if(p.substr(p.find_last_of('.') + 1) == L"wav" || p.substr(p.find_last_of('.') + 1) == L"mp3")
 			{
+				if(songChoice == count)
+				{
+					p2 = a.path();
+
+					playing = wstring(p2.begin(), p2.end());
+					playing = cDir(playing);
+					playing = playing.substr(playing.find_last_of('/') + 1);
+
+					if(lastPlayed != playing)
+						sound->stopAll(),
+						sound->setAudio(string(playing.begin(), playing.end())),
+						sound->play(true);
+					lastPlayed = playing;
+				}
+
 				songPath.push_back(p = cDir(p));
 				songs.push_back(p.substr(last = (p.find_last_of('/') + 1), p.find_last_of('.') - last));
 
@@ -458,28 +558,32 @@ bool songList()
 				count++;
 			}
 		}
+
+
 		songChoiceMovement(songs.size());
 		*songName = string(songPath[songChoice].begin(), songPath[songChoice].end());
 		con->drawConsole();
 		songs.clear();
 		songPath.clear();
-		if(key.stroke('S'))
+		if(KeyInput::stroke('S'))
 		{
+			sound->stopAll();
 			*songName = "";
 			return false;
 		}
 	}
-
+	sound->stopAll();
 	return true;
 }
 
 bool createdSongList()
 {
-	wstring path = L"./songs/", str, p;
+	wstring path = L"./songs/", str, p, p2;
+	wstring playing, lastPlayed;
 	vector<wstring>songs, songPath;
 	int colours[] = {FG_WHITE,FG_GREEN};
-
-	while(!key.stroke('A'))
+	songChoice = 0;
+	while(!KeyInput::stroke('A'))
 	{
 		int last, count = 0, startHeight = con->getHeight() / 2 - songs.size(), startWidth = con->getWidth() / 2;
 		for(auto &a : fs::directory_iterator(path))
@@ -492,6 +596,22 @@ bool createdSongList()
 			con->toConsoleBuffer(L"----------------------------", startWidth - 14, startHeight - 1);
 			if(p.substr(p.find_last_of('.') + 1) == L"song")
 			{
+				if(songChoice == count)
+				{
+					p2 = a.path();
+
+					playing = wstring(p2.begin(), p2.end());
+					playing = cDir(playing);
+					playing = playing.substr(playing.find_last_of('/') + 1);
+
+					if(lastPlayed != playing)
+						openSong(string(playing.begin(), playing.end() - 5)),
+						sound->stopAll(),
+						sound->setAudio(*songName),
+						sound->play(true);
+					lastPlayed = playing;
+				}
+
 				//	OutputDebugStringA("Entered if Statement\n");
 				songPath.push_back(p = cDir(p));
 				songs.push_back(p.substr(last = (p.find_last_of('/') + 1), p.find_last_of('.') - last));
@@ -502,13 +622,16 @@ bool createdSongList()
 			//OutputDebugStringA("Exited if Statement\n");
 		}
 		songChoiceMovement(songs.size());
-		if(songChoice >= 0)
+		if(songChoice >= 0 && songChoice < songs.size())
 			*songName = string(songs[songChoice].begin(), songs[songChoice].end());
 		con->drawConsole();
 		songs.clear();
 		songPath.clear();
-		if(key.stroke('S'))
+		if(KeyInput::stroke('S'))
+		{
+			sound->stopAll();
 			return false;
+		}
 	}
 	return true;
 }
@@ -534,18 +657,36 @@ void reset()
 	incriment = -1;
 	start = false;
 	notesHit = 0;
-	//*tsT = clock();
-	*tsT = 0;
-	*startT = clock();
+}
+
+void calculateFPS()
+{
+	static const int SAMPLE = 30;
+	static short count;
+	static float frameTimes[SAMPLE];
+
+	static clock_t timer;
+
+	frameTimes[count++] = 1.f / (float(clock() - timer) / CLOCKS_PER_SEC);
+	if(count == SAMPLE)
+	{
+		count = 0;
+		fps = 0;
+		for(auto &a : frameTimes)
+			fps += a;
+		fps /= SAMPLE;
+	}
+
+	timer = clock();
 }
 
 void controles()
 {
 	Sprite controles;
 	controles.create("Controles.txt");
-	while(!key.stroke('A') && !key.stroke('S'))
-	con->toConsoleBuffer(controles, con->getWidth()/2-controles.getWidth()/2, con->getHeight() / 2 - controles.getHeight() / 2),
-	con->drawConsole();
+	while(!KeyInput::stroke('A') && !KeyInput::stroke('S'))
+		con->toConsoleBuffer(controles, con->getWidth() / 2 - controles.getWidth() / 2, con->getHeight() / 2 - controles.getHeight() / 2),
+		con->drawConsole();
 }
 
 bool startScreen()
@@ -576,15 +717,15 @@ bool startScreen()
 			}
 
 		x = con->getWidth() / 2 - (*box).getWidth() / 2, y = con->getHeight() / 2 - (2 * (box->getHeight() / 2));
-		if(key.stroke(VK_UP))
+		if(KeyInput::stroke(VK_UP))
 			create--;
-		if(key.stroke(VK_DOWN))
+		if(KeyInput::stroke(VK_DOWN))
 			create++;
 
 		if(create >= numBoxes)
 			create = 0;
 		if(create < 0)
-			create = numBoxes-1;
+			create = numBoxes - 1;
 
 		con->toConsoleBuffer((*logo)[0], con->getWidth() / 2 - (*logo)[0].getWidth() / 2, 12, FG_RED | FG_INTENSIFY);
 		con->toConsoleBuffer(*box, x, y, colours[create == 0]);
@@ -595,10 +736,10 @@ bool startScreen()
 		con->toConsoleBuffer(L"Controles", x + 4, y + 12, colours[create == 2]);
 
 		con->drawConsole();
-		if(key.stroke('Q'))
+		if(KeyInput::stroke('Q'))
 			return false;
 
-		if(key.stroke('A'))
+		if(KeyInput::stroke('A'))
 			if(create == 0)	//play song
 			{
 				if(exit = createdSongList())
@@ -609,7 +750,7 @@ bool startScreen()
 				if(exit = songList())
 					for(auto &a : *song)
 						a.clear();
-			} else if(create== 2)
+			} else if(create == 2)
 			{
 				controles();
 			}
@@ -622,27 +763,6 @@ bool startScreen()
 }
 #pragma endregion
 
-void calculateFPS()
-{
-	static const int SAMPLE = 30;
-	static short count;
-	static float frameTimes[SAMPLE];
-
-	static clock_t timer;
-
-	frameTimes[count++] = 1.f / (float(clock() - timer) / CLOCKS_PER_SEC);
-	if(count == SAMPLE)
-	{
-		count = 0;
-		fps = 0;
-		for(auto &a : frameTimes)
-			fps += a;
-		fps /= SAMPLE;
-	}
-
-	timer = clock();
-}
-
 void main()
 {
 	//con->textFileToVector("Track.txt", *track);
@@ -651,6 +771,9 @@ void main()
 	logo->create("Logo.txt");
 	track->create("Track.txt");
 	notes->create("Notes.txt");
+	pauseMenu->create("Pause Menu.txt");
+
+
 	con->setConsoleSize((*track)[0].getWidth() * 2, (*track)[0].getHeight());
 	con->setConsolePosition(0, 0);
 	con->setResizable(true);
@@ -668,11 +791,13 @@ void main()
 	while(true)
 		if(startScreen())
 		{
-			fretboardPosition = con->getHeight() - 7;
 
-			*diffT = clock();
-			while(!key.stroke('Q'))
+			while(true)
 			{
+
+				fretboardPosition = con->getHeight() - 7;
+				if(!paused&&KeyInput::stroke('Q'))
+					break;
 				centerTrack = con->getWidth() / 2 - (*track)[0].getWidth() / 2;
 
 				if(create)

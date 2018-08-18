@@ -74,6 +74,12 @@ void AudioPlayer::pause()
 	mciSendStringA(string("pause " + to_string(_inst * 10)).c_str(), NULL, 0, NULL);
 }
 
+void AudioPlayer::pauseAll()
+{
+	for(int a = 0; a < _numInst; a++)
+		mciSendStringA(string("pause " + to_string((a + 1) * 10)).c_str(), NULL, 0, NULL);
+}
+
 void AudioPlayer::resume()
 {
 	mciSendStringA(string("resume " + to_string(_inst * 10)).c_str(), NULL, 0, NULL);
@@ -142,7 +148,7 @@ unsigned int AudioPlayer::getPosition()
 void AudioPlayer::setPosition(unsigned int ms)
 {
 	mciSendStringA(string("seek " + to_string(_inst * 10) + " to start").c_str(), NULL, 0, NULL);
-	mciSendStringA(string("seek " + to_string(_inst * 10) + " to "+to_string(ms)).c_str(), NULL, 0, NULL);
+	mciSendStringA(string("seek " + to_string(_inst * 10) + " to " + to_string(ms)).c_str(), NULL, 0, NULL);
 }
 
 bool AudioPlayer::printError(int error)

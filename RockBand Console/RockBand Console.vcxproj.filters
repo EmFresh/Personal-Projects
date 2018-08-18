@@ -27,18 +27,12 @@
     <ClCompile Include="KeyInput.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Sound.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EmConsole.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="keyinput.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Sound.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AudioPlayer.h">
@@ -59,6 +53,9 @@
       <Filter>Resource Files</Filter>
     </Text>
     <Text Include="Controles.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Pause Menu.txt">
       <Filter>Resource Files</Filter>
     </Text>
   </ItemGroup>

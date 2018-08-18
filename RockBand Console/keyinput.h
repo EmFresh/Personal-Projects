@@ -16,7 +16,7 @@
 class KeyInput
 {
 private:
-	std::unordered_map<int, bool>enter;
+	static std::unordered_map<int, bool>enter;
 	std::vector<char>
 		numShiftKeys {')','!','@','#','$','%','^','&','*','('},
 		symbalKeys {';','/','`','[','\\',']','\'','=',',','-','.'},
@@ -48,7 +48,7 @@ public:
 
 	 to be checked if key is pressed and then released
 	*/
-	bool stroke(int key);
+	static bool stroke(int key);
 
 	/*
 	bool press(int key)
@@ -57,7 +57,7 @@ public:
 	(Note: characters must be in uppercase) to be
 	checked if key is pressed
 	*/
-	bool press(int key);
+	static bool press(int key);
 
 	/*
 	bool release(int key)
@@ -66,5 +66,5 @@ public:
 	(Note: characters must be in uppercase) to be
 	checked if key is released
 	*/
-	bool release(int key);
+	static bool release(int key);
 };

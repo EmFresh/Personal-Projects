@@ -51,10 +51,16 @@ public:
 	void mute();
 
 	/*
-	Pauses the latest instance of a running _audio file.
-	paused _audio can be resumed by using resume();
+	Pauses the all instances of a running audio file.
+	paused audio can be resumed by using resume();
 	*/
 	void pause();
+
+	/*
+	Pauses the latest instance of a running audio files.
+	paused audio can be resumed by using resume();
+	*/
+	void pauseAll();
 
 	/*
 	Resumes the latest instance of a paused _audio file.

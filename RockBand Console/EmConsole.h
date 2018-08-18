@@ -82,12 +82,11 @@ struct Sprite
 		_width = 0;
 
 		wchar_t * str = new wchar_t[255];
-		std::wstring str2 = L"";
 		//while(str2 = fgetws(str2, 255, f),
 		//	  str = (str2 == nullptr ? L"" : (str2[wcslen(str2) - 1] = '\0', str2)),
 		//	  str2 != nullptr);
 
-		while(str = fgetws(str, 255, f), sprite.push_back(str2=( str == nullptr ? L"" : (str[wcslen(str) - 1] = '\0',str))), str != nullptr)
+		while(str = fgetws(str, 255, f), sprite.push_back(( str == nullptr ? L"" : (str[wcslen(str) - 1] = '\0',str))), str != nullptr)
 			_width = _width < (sprite[_height]).size() ? (sprite[_height]).size() : _width,
 		_height++;
 

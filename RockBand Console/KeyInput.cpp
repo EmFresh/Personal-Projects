@@ -6,6 +6,9 @@
 
 #include "KeyInput.h"
 
+
+std::unordered_map<int, bool> KeyInput::enter;
+
 void KeyInput::setTyped(std::string str)
 {
 	typing = str;
