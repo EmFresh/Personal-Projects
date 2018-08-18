@@ -76,22 +76,17 @@ struct Sprite
 		//std::vector<std::wstring>* tmp = _sprite;
 		_sprite->clear();
 
-		std::vector<std::wstring>sprite;
+		//std::vector<std::wstring>sprite;
 
-		_height = 
-		_width = 0;
+		_height = _width = 0;
 
 		wchar_t * str = new wchar_t[255];
-		//while(str2 = fgetws(str2, 255, f),
-		//	  str = (str2 == nullptr ? L"" : (str2[wcslen(str2) - 1] = '\0', str2)),
-		//	  str2 != nullptr);
 
-		while(str = fgetws(str, 255, f), sprite.push_back(( str == nullptr ? L"" : (str[wcslen(str) - 1] = '\0',str))), str != nullptr)
-			_width = _width < (sprite[_height]).size() ? (sprite[_height]).size() : _width,
-		_height++;
+		while(str = fgetws(str, 255, f), _sprite->push_back((str == nullptr ? L"" : (str[wcslen(str) - 1] = (str[wcslen(str) - 1] == '\n' ? '\0' : str[wcslen(str) - 1]), str))), str != nullptr)
+			_width = _width < (_sprite[0][_height]).size() ? (_sprite[0][_height]).size() : _width,
+			_height++;
 
-		*_sprite = sprite;
-
+		_sprite->pop_back();
 		fclose(f);
 	}
 
@@ -191,7 +186,7 @@ struct SpriteSheet
 		fopen_s(&f, file, "r, ccs=UNICODE");
 
 		while(str2 = fgetws(str2, 255, f),
-			  str = (str2 == nullptr ? L"" : (str2[wcslen(str2) - 1] = '\0', str2)),
+			  str = (str2 == nullptr ? L"" : (str2[wcslen(str2) - 1] = (str2[wcslen(str2) - 1] == '\n' ? '\0' : str2[wcslen(str2) - 1]), str2)),
 			  str2 != nullptr)
 		{
 			if(str.size() == 0)

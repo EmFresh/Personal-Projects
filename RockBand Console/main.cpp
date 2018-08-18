@@ -212,17 +212,14 @@ void missFX(int seed)
 
 bool collision()
 {
-	bool colli = false;
+	bool colli(false);
+
 	for(int a = 0; a < songTemp->size(); a++)
 	{
 
 		while(colliCount[a] < (*songTemp)[a].size() &&
 			(*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition + 3)
 			colliCount[a]++;
-
-		//if(colliCount[a] + 1 < (*songTemp)[a].size())
-		//	if((*songTemp)[a][colliCount[a] + 1] + noteOffset > fretboardPosition - 3)
-		//		colliCount[a] ++;
 
 		if(pressed[a])
 			if(colliCount[a] < (*songTemp)[a].size())
@@ -350,21 +347,15 @@ void barLines()
 
 void playSongMovement()
 {
-	//OutputDebugString((to_string(songTemp->size()) + "\n").c_str());
-	//incriment = sound->getPosition();
-
-
 	for(short a = 0; a < songTemp->size(); a++)
 	{
 		for(int b = countAmount[a]; b < (*songTemp)[a].size(); b++)
 		{
 
-			//OutputDebugString((to_string(b)+", " ).c_str());
-
-
 			// moves the song along
 			(*songTemp)[a][b] = (*song)[a][b] / speed + incriment / speed + fretboardPosition;
 
+			//stop checcking if nothing can be seen
 			if((*songTemp)[a][b] <= -3)
 				break;
 
@@ -378,6 +369,7 @@ void playSongMovement()
 					if((*songTemp)[a][b - 1] + noteOffset > con->getHeight())
 						countAmount[a]++;
 
+
 					if((*disiNotes)[a].size() > 0)
 						if(b == (*disiNotes)[a][0])
 							(*disiNotes)[a].erase((*disiNotes)[a].begin());
@@ -385,21 +377,19 @@ void playSongMovement()
 
 			if(!invisable(a, b))
 				if((*songTemp)[a][b] + noteOffset > -3 && (*songTemp)[a][b] + noteOffset < con->getHeight())
-					if((*songTemp)[a][b] + noteOffset < fretboardPosition + notes[0][0].getHeight())
+					if((*songTemp)[a][b] + noteOffset < fretboardPosition + notes[0][0].getHeight())//draw notes above the fret board
 					{
 						///Normal
-					  //con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
+						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
 
-					  ///Colision Test
-						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, 
-											 b != colliCount[a] ? (*noteColour)[a] : FG_INTENSIFY | FG_WHITE);
+						///Colision Test
+						//con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset,
+						//					 b != colliCount[a] ? (*noteColour)[a] : FG_INTENSIFY | FG_WHITE);
 
-					} else
+					} else//draw notes below the fret board
 						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, FG_RED | FG_INTENSIFY);
 		}
-		//OutputDebugString((to_string(countAmount[a]) + "\n").c_str());
 	}
-	//lastIncriment = incriment;
 }
 
 void playPauseMenu()
@@ -426,12 +416,19 @@ void playButtonPress()
 		reset();
 	if(KeyInput::stroke(VK_RETURN) || paused)
 		playPauseMenu();
+	
+	bool newSpeed;
+	if((newSpeed = KeyInput::stroke(VK_NUMPAD4)) || KeyInput::stroke(VK_NUMPAD6))
+		if((speed + (newSpeed ? 5 : -5)) > 0)
+			speed += newSpeed? 5 : -5,
+	OutputDebugStringA((to_string(speed) + '\n').c_str());
 
 	if(!paused)
 	{
 		//Strum released
 		if((KeyInput::release(VK_UP) && KeyInput::release(VK_DOWN)))
 			stroke = false;
+
 		//Strum pressed
 		if((KeyInput::press(VK_UP) || KeyInput::press(VK_DOWN)) && !stroke)
 		{
