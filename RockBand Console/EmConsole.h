@@ -82,7 +82,8 @@ struct Sprite
 
 		wchar_t * str = new wchar_t[255];
 
-		while(str = fgetws(str, 255, f), _sprite->push_back((str == nullptr ? L"" : (str[wcslen(str) - 1] = (str[wcslen(str) - 1] == '\n' ? '\0' : str[wcslen(str) - 1]), str))), str != nullptr)
+		while(str = fgetws(str, 255, f),
+			  _sprite->push_back((str == nullptr ? L"" : (str[wcslen(str) - 1] = (str[wcslen(str) - 1] == '\n' ? '\0' : str[wcslen(str) - 1]), str))), str != nullptr)
 			_width = _width < (_sprite[0][_height]).size() ? (_sprite[0][_height]).size() : _width,
 			_height++;
 
@@ -162,7 +163,7 @@ struct SpriteSheet
 	Creates SpriteSheet from a .txt file. Creates a new
 	Sprite when it finds a line with a lenght of zero
 	*/
-	void create(const char* file)
+	void create(const char* file, const wchar_t* split = L"")
 	{
 		FILE *f;
 
@@ -189,7 +190,7 @@ struct SpriteSheet
 			  str = (str2 == nullptr ? L"" : (str2[wcslen(str2) - 1] = (str2[wcslen(str2) - 1] == '\n' ? '\0' : str2[wcslen(str2) - 1]), str2)),
 			  str2 != nullptr)
 		{
-			if(str.size() == 0)
+			if(str == split)
 			{
 				if(!seg)
 				{

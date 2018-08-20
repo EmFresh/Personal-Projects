@@ -27,12 +27,11 @@ FG_YELLOW | FG_INTENSIFY,FG_BLUE | FG_INTENSIFY,FG_PURPLE | FG_INTENSIFY};
 vector <int> *lines = new vector <int>;
 
 vector<vector<long>>*song = new vector<vector<long>>(5), *songTemp = new vector<vector<long>>(5);
-long *lastNote = new long, *incrimentCounter = new long;
-int trackSpeed[5], barCount, centerTrack, countAmount[5], notesHit, noteOffset = 0, fretOffset, fretboardPosition, speed = 60, create;
+int trackSpeed[5], barCount, centerTrack, countAmount[5], notesHit, noteOffset = 0, fretOffset, fretboardXPosition, fretboardYPosition, speed = 30, lastSpeed, spacingScale = lastSpeed = speed, create;
 uint colliCount[5];
 float  fps = 0;
 long incriment = -1;
-bool pressed[5], stroke, start = true, paused = false;
+bool pressed[5], stroke, start, paused = false;
 
 int vol, mute, songChoice, songChoiceCounter;
 string* songName = new string;
@@ -186,7 +185,7 @@ void createTrack()
 
 	// draws frets that lightup when key is pressed
 	for(short a = 0; a < 5; a++)
-		con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), fretboardPosition, (*fretColour)[a]);
+		con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 2), fretboardYPosition, (*fretColour)[a]);
 }
 #pragma endregion
 
@@ -218,12 +217,12 @@ bool collision()
 	{
 
 		while(colliCount[a] < (*songTemp)[a].size() &&
-			(*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition + 3)
+			(*songTemp)[a][colliCount[a]] + noteOffset > fretboardYPosition + 3)
 			colliCount[a]++;
 
 		if(pressed[a])
 			if(colliCount[a] < (*songTemp)[a].size())
-				if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition - 3)
+				if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardYPosition - 3)
 					colli = true;
 	}
 	return colli;
@@ -239,7 +238,7 @@ void noteDelete()
 	for(int a = 0; a < songTemp->size(); a++)
 		//if(pressed[a])
 		if(colliCount[a] < (*songTemp)[a].size())
-			if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardPosition - 3 && (*songTemp)[a][colliCount[a]] + noteOffset <= fretboardPosition + 3)
+			if((*songTemp)[a][colliCount[a]] + noteOffset > fretboardYPosition - 3 && (*songTemp)[a][colliCount[a]] + noteOffset <= fretboardYPosition + 3)
 				num.push_back(a);
 
 	if(num.size() == 1)
@@ -303,18 +302,36 @@ float notesInSong(vector<vector<long>>*song)
 
 void drawLines()
 {
+	static int spacing = (float) (*notes)[0].getHeight() / ((float) spacingScale / (speed - (speed - 30) * 2));
+
 	int barNum = 4;
 	for(int a = 0; a < lines->size(); a++)
 		if(incriment > 0)
 			if(!((a + (barCount)) % barNum))
-				con->toConsoleBuffer(L"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", centerTrack + 1, ((*lines)[a] + incriment / speed),
+				con->toConsoleBuffer(L"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", centerTrack + 1, ((*lines)[a] + incriment / speed),
 									 FG_WHITE | FG_INTENSIFY);
 			else
-				con->toConsoleBuffer(L"──────────────────────────────────────────────────────────────", centerTrack + 1, ((*lines)[a] + incriment / speed),
+				con->toConsoleBuffer(L"────────────────────────────────────────────────────────────────", centerTrack + 1, ((*lines)[a] + incriment / speed),
 									 FG_WHITE);
+
 	//create new barlines
-	for(; ((*lines)[lines->size() - 1] + incriment / speed) > (*notes)[0].getHeight();)
-		lines->push_back((*lines)[lines->size() - 1] - (*notes)[0].getHeight() * 2);
+	while(((*lines)[lines->size() - 1] + incriment / speed) > spacing / 2)
+		lines->push_back((*lines)[lines->size() - 1] - spacing);
+
+	//adjust line spacing
+	if(speed != lastSpeed)
+	{
+		for(int a = 0; a < lines->size(); a++)
+			if(a)
+				lines[0][a] = lines[0][a - 1] - (float) (*notes)[0].getHeight() / ((float) spacingScale / (speed - (speed - 30) * 2));//apply spacing
+			else if((incriment / speed - incriment / lastSpeed) < 0)
+				lines[0][a] -= incriment / speed - incriment / lastSpeed;
+			else
+				lines[0][a] += incriment / lastSpeed - incriment / speed;
+
+		lastSpeed = speed;
+		spacing = (float) (*notes)[0].getHeight() / ((float) spacingScale / (speed - (speed - 30) * 2));
+	}
 
 	//deleat old barlines
 	while(((*lines)[0] + incriment / speed) > con->getHeight())
@@ -325,7 +342,6 @@ void drawLines()
 			barCount = 0;
 	}
 
-	//	OutputDebugStringA(string(to_string(lines[lines.size()-1])+" : "+ to_string(notes[0].size()) + "\n").c_str());
 
 }
 
@@ -333,15 +349,31 @@ void barLines()
 {
 	if(song->size() > 0)
 	{
-		//incriment = -round((clock() - *tsT) / double(*endT) * double(*lastNote)) - lastIncriment;
-		//incriment = -round((sound->getPosition()) / double(*endT) * double(*lastNote)) - lastIncriment;
 		incriment = sound->getPosition();
+		if(start)
+		{
+			start = false;
+			int firstNote = 0;
+			bool firstVal = false;
+			for(auto&a : *songTemp)
+				if(a.size() > 0)
+					if(!firstVal)
+						firstNote = a[0],
+						firstVal = true;
+					else if(a[0] > firstNote)
+						firstNote = a[0];
+
+			firstNote = firstNote / speed + incriment / speed + fretboardYPosition - 2;
+
+			lines->clear(),
+				lines->push_back(firstNote);
+		}
+
 		drawLines();
 	} else
 	{
 		incriment = sound->getPosition();
 		drawLines();
-
 	}
 }
 
@@ -353,7 +385,7 @@ void playSongMovement()
 		{
 
 			// moves the song along
-			(*songTemp)[a][b] = (*song)[a][b] / speed + incriment / speed + fretboardPosition;
+			(*songTemp)[a][b] = (*song)[a][b] / speed + incriment / speed + fretboardYPosition;
 
 			//stop checcking if nothing can be seen
 			if((*songTemp)[a][b] <= -3)
@@ -377,25 +409,33 @@ void playSongMovement()
 
 			if(!invisable(a, b))
 				if((*songTemp)[a][b] + noteOffset > -3 && (*songTemp)[a][b] + noteOffset < con->getHeight())
-					if((*songTemp)[a][b] + noteOffset < fretboardPosition + notes[0][0].getHeight())//draw notes above the fret board
+					if((*songTemp)[a][b] + noteOffset < fretboardYPosition + notes[0][0].getHeight())//draw notes above the fret board
 					{
 						///Normal
-						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
+						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 2), (*songTemp)[a][b] + noteOffset, (*noteColour)[a]);
 
 						///Colision Test
-						//con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset,
+						//con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 2), (*songTemp)[a][b] + noteOffset,
 						//					 b != colliCount[a] ? (*noteColour)[a] : FG_INTENSIFY | FG_WHITE);
 
 					} else//draw notes below the fret board
-						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), (*songTemp)[a][b] + noteOffset, FG_RED | FG_INTENSIFY);
+						con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 2), (*songTemp)[a][b] + noteOffset, FG_RED | FG_INTENSIFY);
 		}
 	}
 }
 
 void playPauseMenu()
 {
+	wstring options[]{L"Resume",L"Speed",L"Start Screen"};
+	static uint colours[]{FG_WHITE, FG_GREEN | FG_INTENSIFY, FG_GREEN};
+	static short select;
+	static bool selection(false);
+	const short optAmount = 3;
+
+
+
 	sound->pause();
-	if(KeyInput::press('S') || KeyInput::press('Q') || KeyInput::stroke(VK_BACK))
+	if((KeyInput::press('S') || KeyInput::press('Q') || KeyInput::stroke(VK_BACK)) && !selection)
 	{
 		sound->resume();
 		paused = false;
@@ -403,7 +443,24 @@ void playPauseMenu()
 	}
 	paused = true;
 
+
+	if(KeyInput::stroke('A') || (selection&&KeyInput::stroke('S')))
+		selection = !selection,
+		swap(colours[1], colours[2]);
+
+	if(!selection)
+		if(KeyInput::stroke(VK_UP))
+			select > 0 ? select-- : select = optAmount - 1;
+		else if(KeyInput::stroke(VK_DOWN))
+			select + 1 < optAmount ? select++ : select = 0;
+
 	con->toConsoleBuffer(*pauseMenu, con->getWidth() / 2 - (*pauseMenu).getWidth() / 2, con->getHeight() / 3 - (*pauseMenu).getHeight() / 2);
+
+	for(uint a = 0; a < optAmount; a++)
+	{
+		con->toConsoleBuffer(options[a], con->getWidth() / 2 - (options[a]).size() / 2, ceilf(con->getHeight() / 4.5) + a * 2, colours[select == a]);
+
+	}
 
 }
 
@@ -416,13 +473,14 @@ void playButtonPress()
 		reset();
 	if(KeyInput::stroke(VK_RETURN) || paused)
 		playPauseMenu();
-	
+
 	bool newSpeed;
 	if((newSpeed = KeyInput::stroke(VK_NUMPAD4)) || KeyInput::stroke(VK_NUMPAD6))
-		if((speed + (newSpeed ? 5 : -5)) > 0)
-			speed += newSpeed? 5 : -5,
-	OutputDebugStringA((to_string(speed) + '\n').c_str());
+		if((speed + (newSpeed ? 5 : -5)) > 0 && ((float) (*notes)[0].getHeight() / ((float) spacingScale / (speed + (newSpeed ? 5 : -5) - (speed + (newSpeed ? 5 : -5) - 30) * 2))) > 0)
+			speed += newSpeed ? 5 : -5,
+			OutputDebugStringA((to_string(speed) + '\n').c_str());
 
+	//Strumming
 	if(!paused)
 	{
 		//Strum released
@@ -446,21 +504,22 @@ void playButtonPress()
 		}
 	}
 
+	//Note light
 	for(short a = 0; a < 5; a++)
+	{
 		if(KeyInput::release(frets[a]))
 		{
 			pressed[a] = false;
 			if((*fretColour)[a] > 8)
 				(*fretColour)[a] -= 8;
 		}
-	for(short a = 0; a < 5; a++)
 		if(KeyInput::press(frets[a]))
 		{
 			pressed[a] = true;
 			if((*fretColour)[a] < 8)
 				(*fretColour)[a] += 8;
 		}
-
+	}
 }
 
 void playTrack()
@@ -479,7 +538,7 @@ void playTrack()
 
 	// draws frets that lightup when key is pressed
 	for(short a = 0; a < 5; a++)
-		con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 1), fretboardPosition, (*fretColour)[a]);
+		con->toConsoleBuffer((*notes)[0], (centerTrack) +(a * 13 + 2), fretboardYPosition, (*fretColour)[a]);
 }
 #pragma endregion
 
@@ -644,13 +703,11 @@ void reset()
 	sound->stopAll();
 	sound->play();
 	*songTemp = *song;
-	*incrimentCounter = 0;
-	lines->clear(),
-		lines->push_back(con->getHeight() - 25);
-	barCount = songChoice = 0;
-	incriment = -1;
-	start = false;
-	notesHit = 0;
+	barCount = songChoice =
+		notesHit = 0;
+	incriment = sound->getPosition();
+	start = true;
+
 }
 
 void calculateFPS()
@@ -766,7 +823,7 @@ void main()
 	track->create("Track.txt");
 	notes->create("Notes.txt");
 	pauseMenu->create("Pause Menu.txt");
-
+	spacingScale /= 2;
 
 	con->setConsoleSize((*track)[0].getWidth() * 2, (*track)[0].getHeight());
 	con->setConsolePosition(0, 0);
@@ -789,10 +846,11 @@ void main()
 			while(true)
 			{
 
-				fretboardPosition = con->getHeight() - 7;
-				if(!paused&&KeyInput::stroke('Q'))
-					break;
 				centerTrack = con->getWidth() / 2 - (*track)[0].getWidth() / 2;
+				fretboardYPosition = con->getHeight() - 7;
+				//	fretboardXPosition=(centerTrack) +(a * 13 + 2)
+				if(!paused && KeyInput::stroke('Q'))
+					break;
 
 				if(create)
 					createTrack();

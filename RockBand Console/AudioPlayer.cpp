@@ -32,8 +32,9 @@ void AudioPlayer::play(bool repeat)
 	int inst = 0;
 	char status[128];
 
+	
 	//opens an instance of the _audio file
-	while(inerror = mciSendStringA(string("open " + *_audio + " alias " + to_string(++inst * 10)).c_str(), NULL, 0, NULL))
+	while(inerror = mciSendStringA(string("open " + *_audio + " alias " + to_string(++inst * 10)+" notify").c_str(), NULL, 0, GetForegroundWindow()))
 		if(inst > _numInst)
 		{
 			printError(inerror);
@@ -167,7 +168,7 @@ void AudioPlayer::cleanUp()
 {
 	char info[128];
 	mciSendStringA("sysinfo all quantity open", info, 128, NULL);
-	string size = string(info);
+	string size = info;
 
 	for(int a = 1; a <= stoi(size); a++)
 	{
@@ -180,7 +181,7 @@ void AudioPlayer::cleanUp()
 			mciSendStringA(string("close " + string(info)).c_str(), 0, 0, NULL);
 			OutputDebugStringA(string("close " + string(info) + "\n").c_str());
 			mciSendStringA(string("sysinfo all quantity open").c_str(), info, 128, NULL);
-			size = string(info);
+			size = info;
 		}
 	}
 }
